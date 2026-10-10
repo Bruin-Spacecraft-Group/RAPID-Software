@@ -32,4 +32,4 @@ After cloning the repository, be sure to run
 
     git submodule update --init <path to submodule>
 
-for each submodule (`path to submodule` usually will just be `submodules/Adafruit_CircuitPython_asyncio` and `submodules/Adafruit_CircuitPython_Tasks`), this updates the submodules (other git repos that have dependencies we use)
+for each submodule (`path to submodule` usually will just be `submodules/Adafruit_CircuitPython_asyncio` and `submodules/Adafruit_CircuitPython_Ticks`), this updates the submodules (other git repos that have dependencies we use)
