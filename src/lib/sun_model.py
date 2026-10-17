@@ -5,6 +5,7 @@ Sun position algorithm adapted from https://aa.usno.navy.mil/faq/sun_approx
 import numpy as np
 
 J2000 = 2451545.0 #For Julian Date January 1st 2000 12:00 UTC 
+AU_KM = 149597870.7 #Kilometers in 1 AU
 
 def dist_sun_from_earth(jd, fr):
     """
@@ -53,7 +54,28 @@ def dist_sun_from_earth(jd, fr):
     delta = np.arcsin(darg)
     print("delta new: ", delta, darg)
                 
-    return r_sun
+    return r_sun, alpha, delta
+
+
+def vec_satellite_to_sun(jd, fr, r_sat):
+    """
+    Calculating vector from satellite to Sun (in km) from Julian Date and the
+    satellite position vector returned by SGP4 (Earth-centered, in km)
+    """
+
+    r_sun, alpha, delta = dist_sun_from_earth(jd, fr)
+
+    #Earth to Sun vector from RA/Dec: r * [cos(delta)cos(alpha), cos(delta)sin(alpha), sin(delta)]
+    r_earth_sun = r_sun * AU_KM * np.array([
+        np.cos(delta) * np.cos(alpha),
+        np.cos(delta) * np.sin(alpha),
+        np.sin(delta)
+    ])
+
+    #Satellite to Sun = Earth to Sun - satellite to earth
+    v_sat_sun = r_earth_sun + np.array(r_sat)
+
+    return v_sat_sun
 
 if __name__ == '__main__':
         jd = 2461221
