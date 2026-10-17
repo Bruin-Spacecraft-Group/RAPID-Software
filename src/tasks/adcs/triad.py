@@ -12,7 +12,6 @@ COLLINEAR = 2  # Collinear vectors: failure, impossible to estimate attitude
 SINGULAR = 3  # Singular: failure from insufficient information to estimate attitude
 NORM_ERR = 4  # Normalization error: failure from prevented division by zero
 
-
 # pylint: disable=too-many-locals
 def triad_algorithm(
     r1: np.ndarray, r2: np.ndarray, b1: np.ndarray, b2: np.ndarray
