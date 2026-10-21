@@ -45,14 +45,14 @@ class TLEConstruction_Test(unittest.TestCase):
         line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993"
         line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"
 
-        satellite = tle.TLE(line1, line2)
+        satellite = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1, line2)
 
         self.assertAlmostEqual(satellite.inclination, 51.6435)
         self.assertAlmostEqual(satellite.eccentricity, 0.0007417)
         self.assertAlmostEqual(satellite.mean_motion, 15.49112339)
         self.assertAlmostEqual(satellite.bstar, 0.000029621)
-        self.assertAlmostEqual(satellite.mean_anomaly, 99.9999)
-        self.assertAlmostEqual(satellite.argument_of_perigee, 260.0000)
+        self.assertAlmostEqual(satellite.mo, 260.0000)
+        self.assertAlmostEqual(satellite.argp, 99.9999)
         self.assertAlmostEqual(satellite.right_ascension, 21.0930)
         self.assertEqual(satellite.satellite_number, 25544)
         self.assertEqual(satellite.classification, 'U')
