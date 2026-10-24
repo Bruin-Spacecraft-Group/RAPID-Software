@@ -113,40 +113,47 @@ class Satrec:
         are used in the TLE format.
         """
 
-        cls()
-        cls.name=name
-        cls.norad=line1[2:7]
-        cls.classification=line1[7] or 'U'
-        cls.int_desig=line1[9:17]
-        cls.epoch_year=_conv_year(line1[18:20])
-        cls.epoch_day=float(line1[20:32])
-        cls.dn=float(line1[33:43])
-        cls.bstar=_parse_float(line1[53:61])
-        cls.ddn=_parse_float(line1[44:52])
-        cls.ephtype = line1[62]
-        cls.set_num=line1[64:68]
-        cls.inc=float(line2[8:16])
-        cls.raan=float(line2[17:25])
-        cls.ecc=_parse_decimal(line2[26:33])
-        cls.argp=float(line2[34:42])
-        cls.mo=float(line2[43:51])
-        cls.n=float(line2[52:63])
-        cls.rev_num=line2[63:68]
-        cls.tle_str=name+line1+line2
+        sat = cls()
+        sat.name = name
+        sat.norad = line1[2:7]
+        sat.classification = line1[7] or 'U'
+        sat.int_desig = line1[9:17].strip()
+        sat.epoch_year = _conv_year(line1[18:20])
+        sat.epoch_day = float(line1[20:32])
+        sat.dn = float(line1[33:43])
+        sat.ddn = _parse_float(line1[44:52])
+        sat.bstar = _parse_float(line1[53:61])
+        sat.ephtype = int(line1[62])
+        sat.set_num = int(line1[64:68])
+        sat.inc = float(line2[8:16])
+        sat.raan = float(line2[17:25])
+        sat.ecc = _parse_decimal(line2[26:33])
+        sat.argp = float(line2[34:42])
+        sat.mo = float(line2[43:51])
+        sat.n = float(line2[52:63])
+        sat.rev_num = int(line2[63:68])
+        sat.tle_str = name + line1 + line2
+        return sat
 
     @classmethod
     def from_tle_file(cls, filename):
         """Load TLE from a file."""
-        if isinstance(filename, str):
-            with open(filename, encoding="utf-8") as fp:
-                return cls.from_tle_lines(*fp.readlines[:2])
-
-        return None
+        with open(filename, encoding="utf-8") as fp:
+            return cls.from_tle_str(fp.read())
 
     @classmethod
     def from_tle_str(cls, string):
         """Load TLE from a string."""
-        return cls.from_tle_lines(*string.split('\n')[:3])
+        lines = [line.strip() for line in string.splitlines() if line.strip()]
+        if len(lines) == 3:
+            name, line1, line2 = lines
+        elif len(lines) == 2:
+            name = ""
+            line1, line2 = lines
+        else:
+            raise ValueError("TLE data must contain two element lines and an optional name")
+
+        return cls.from_tle_lines(name, line1, line2)
 
     def to_array(self):
         """
