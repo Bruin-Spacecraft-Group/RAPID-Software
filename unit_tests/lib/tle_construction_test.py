@@ -141,5 +141,18 @@ class TLEConstruction_Test(unittest.TestCase):
             sat = tle.Satrec.from_tle_file(tle_path)
             self.assert_parsing(sat)
 
+    def test_to_array(self):
+        """Test TLE fields are returned in the documented 2D array layout."""
+        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993"
+        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"
+        sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1, line2)
+
+        self.assertEqual(sat.to_array(), [
+            ["ISS (ZARYA)"],
+            ["25544", "U", "98067A", 2020, 29.54791435, 0.00001264,
+             0.0, 0.000029621, 999],
+            [51.6435, 21.0930, 0.0007417, 99.9999, 260.0, 15.49112339, 21166],
+        ])
+
 if __name__ == "__main__":
     unittest.main()
