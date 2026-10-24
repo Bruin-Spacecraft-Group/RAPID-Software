@@ -1,22 +1,17 @@
 # one line of tle may not get through
 # check the exponents (self.ddn and self.bstar)
-# the check sum isnt where its suppoed to be ( migth be shifted so check column 69)
+# the check sum isnt where its supposed to be ( might be shifted so check column 69)
 # decimal parsing might be off (put decimal in the right place)
-# create a tle string for each case (take current ISS on)
-
-
-
-
+# create a tle string for each case (take current ISS one)
 
 import unittest
 import tle
 
-TLE_tests = [
-    """
-    """, # exponent 1
-    """
-    """,
-]
+TLE_tests = {
+    "test-1": {
+        
+    }
+}
 
 
 class TLEConstruction_Test(unittest.TestCase):
@@ -33,6 +28,8 @@ class TLEConstruction_Test(unittest.TestCase):
             len(l1) == 69 and len(l2) == 69
             and l1.startswith("1 ") and l2.startswith("2 ")
         )
+
+    def 
         
         
     def test_parsing(self):
@@ -41,7 +38,8 @@ class TLEConstruction_Test(unittest.TestCase):
         line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993"
         line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"
 
-        satellite = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1, line2)
+        satellite = tle.Satrec() 
+        satellite.from_tle_lines("ISS (ZARYA)", line1, line2)
 
         """Test TLE data parsing, like inclination, eccentricity, mean motion etc."""
         
@@ -72,6 +70,5 @@ class TLEConstruction_Test(unittest.TestCase):
         self.assertEqual(satellite.n, 25544) # Mean Motion
         self.assertEqual(satellite.rev_num, 21166) # Revolution
 
-
-
-
+if __name__ == "__main__":
+    unittest.main()
