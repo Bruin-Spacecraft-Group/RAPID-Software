@@ -73,7 +73,7 @@ class TLEConstruction_Test(unittest.TestCase):
             + line1[61:]
         )
 
-        sat = tle.Satrec.from_tle_lines(name, line1_case2, line2)
+        sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1_case2, line2)
 
         self.assertAlmostEqual(sat.ddn, 0.00012345)
         self.assertAlmostEqual(sat.bstar, 0.00012345)
