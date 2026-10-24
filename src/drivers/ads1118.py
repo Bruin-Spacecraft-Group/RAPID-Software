@@ -12,7 +12,7 @@ import pin_manager
 
 class MuxSelection:
     """
-    Data points that can be read by an ADS1118. Includes all single-ended and
+    Data points  that can be read by an ADS1118. Includes all single-ended and
     differential voltage inputs, as well as the internal temperature sensor.
 
     Values correspond to the MUX bitfield in the Config Register, except for the
