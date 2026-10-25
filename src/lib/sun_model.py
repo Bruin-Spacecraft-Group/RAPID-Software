@@ -28,6 +28,12 @@ References:
 """
 
 import numpy as np
+from sgp4.api import Satrec
+try:
+    from viz import plot_sat_sun
+except ImportError:
+    pass
+import teme
 
 J2000 = 2451545.0 #For Julian Date January 1st 2000 12:00 UTC 
 AU_KM = 149597870.7 #Kilometers in 1 au, exact by definition [5]
@@ -129,11 +135,23 @@ def vec_satellite_to_sun(jd, fr, r_sat):
     ])
 
     #Satellite to Sun = Earth to Sun - Earth to satellite [4, Eq. (3.35)]
-    v_sat_sun = r_earth_sun - np.array(r_sat)
+    v_sat_sun = r_earth_sun - r_sat
 
     return v_sat_sun
 
 if __name__ == '__main__':
-        jd = 2461221
-        fr = 10446
+        jd, fr = 2458826.5, 0.600
+        s = '1 25544U 98067A   19343.69339541  .00001764  00000-0  38792-4 0  9991'
+        t = '2 25544  51.6439 211.2001 0007417  17.6667  85.6398 15.50103472202482'
+        satellite = Satrec.twoline2rv(s, t)
+        sat_vec = teme.teme_to_j2000(satellite.sgp4(jd,fr)[1], jd, fr)
+        print("error: " + str(satellite.sgp4(jd,fr)[0]))
+        print('Altitude: ' +str(np.sqrt(sat_vec[0]**2 + sat_vec[1]**2 + sat_vec[2]**2))) 
+        print(sat_vec)
+
         print("Returned: " + str(vec_sun_from_earth(jd, fr)))
+        sun_vec = vec_satellite_to_sun(jd, fr, sat_vec)
+
+        fig, u, angle = plot_sat_sun(sat_vec, sun_vec)
+        
+                
