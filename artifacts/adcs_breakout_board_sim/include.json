@@ -13,7 +13,8 @@
         "lib/geomag.py",
         "lib/wmm/WMM_2025.COF",
         "lib/wmm/WMM.COF",
-        "lib/wmm/wmm_2025.py"
+        "lib/wmm/wmm_2025.py",
+        "lib/wmm/WMM2025_TEST_VALUES.txt"
     ],
     "unit_tests": [
         "lib/pin_manager_test.py",
