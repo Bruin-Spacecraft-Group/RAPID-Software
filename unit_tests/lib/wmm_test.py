@@ -230,21 +230,21 @@ class TestGeoMagCoefficients(TestCase):
     def test_calculate_declination_from_2025_wmm_style_2_file(self):
         self.run_tests(
             GeoMag(coefficients_file="wmm/WMM_2025.COF"),
-            "test_values/WMM2025_TEST_VALUES.txt",
+            "wmm/WMM2025_TEST_VALUES.txt",
             TEST_STYLE_2,
         )
 
     def test_calculate_declination_from_2025_wmm_style_2_data(self):
         self.run_tests(
             GeoMag(coefficients_data=WMM_2025),
-            "test_values/WMM2025_TEST_VALUES.txt",
+            "wmm/WMM2025_TEST_VALUES.txt",
             TEST_STYLE_2,
         )
 
     def test_calculate_declination_from_2025_wmm_style_2_year(self):
         self.run_tests(
             GeoMag(base_year=2025),
-            "test_values/WMM2025_TEST_VALUES.txt",
+            "wmm/WMM2025_TEST_VALUES.txt",
             TEST_STYLE_2,
         )
 
@@ -334,8 +334,10 @@ class TestGeoMag(TestCase):
     def test_get_model_filename_default(self):
         geo_mag = GeoMag()
         model_filename = geo_mag._get_model_filename()
-        self.assertEqual(
-            model_filename[-20:], get_os_based_test_path("wmm/WMM.COF")
+        expected = get_os_based_test_path("wmm/WMM.COF")
+        self.assertTrue(
+            model_filename.endswith(expected),
+            f"{model_filename!r} does not end with {expected!r}",
         )
 
     # def test_get_model_filename_default_with_high_resolution(self):
@@ -351,8 +353,10 @@ class TestGeoMag(TestCase):
         with patch("geomag.open", m):
             geo_mag = GeoMag()
             model_filename = geo_mag._get_model_filename()
-            self.assertEqual(
-                model_filename[-16:], get_os_based_test_path("WMM.COF")
+            expected = get_os_based_test_path("wmm/WMM.COF")
+            self.assertTrue(
+                model_filename.endswith(expected),
+                f"{model_filename!r} does not end with {expected!r}",
             )
         self.assertEqual(m.call_count, 2)
 
@@ -362,8 +366,10 @@ class TestGeoMag(TestCase):
         with patch("geomag.open", m):
             geo_mag = GeoMag()
             model_filename = geo_mag._get_model_filename()
-            self.assertEqual(
-                model_filename[-20:], get_os_based_test_path("wmm/WMM.COF")
+            expected = get_os_based_test_path("wmm/WMM.COF")
+            self.assertTrue(
+                model_filename.endswith(expected),
+                f"{model_filename!r} does not end with {expected!r}",
             )
         self.assertEqual(m.call_count, 2)
 
