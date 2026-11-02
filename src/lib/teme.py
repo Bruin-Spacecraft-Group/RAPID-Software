@@ -1,16 +1,18 @@
-# teme.py - TEME -> J2000 (MEME/EME2000) for CircuitPython
-#
-# Input time is a UTC Julian date split as jd + fr (jd the day part, normally
-# a half-integer such as 2460370.5; fr the fraction of a day), the same split
-# SGP4 uses.
-#
-# TEME -> TOD (equation of equinoxes) -> MOD (nutation, IAU-1980,
-# truncated) -> J2000 (precession, IAU-1976). Works
-# the same for position and velocity vectors.
-#
-# note: CircuitPython floats are often 30-bit (~7 digits). Anything
-# that would lose precision (the Julian date itself, multi-revolution
-# angles) is done with Python integers, which are arbitrary precision.
+"""
+teme.py - TEME -> J2000 (MEME/EME2000) for CircuitPython
+
+Input time is a UTC Julian date split as jd + fr (jd the day part, normally
+a half-integer such as 2460370.5; fr the fraction of a day), the same split
+SGP4 uses.
+
+TEME -> TOD (equation of equinoxes) -> MOD (nutation, IAU-1980,
+truncated) -> J2000 (precession, IAU-1976). Works
+the same for position and velocity vectors.
+
+note: CircuitPython floats are often 30-bit (~7 digits). Anything
+that would lose precision (the Julian date itself, multi-revolution
+angles) is done with Python integers, which are arbitrary precision.
+"""
 
 import math
 

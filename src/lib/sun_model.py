@@ -120,7 +120,7 @@ def vec_satellite_to_sun(jd, fr, r_sat, format = "teme"):
 
     # handle conversion of the r_sat
     if format == "teme":
-        r_sat = teme.teme_to_j2000(r_sat)
+        r_sat = teme.teme_to_j2000(r_sat, jd, fr)
 
     #Satellite to Sun = Earth to Sun - Earth to satellite [4, Eq. (3.35)]
     v_sat_sun = vec_sun_from_earth(jd, fr) - r_sat
