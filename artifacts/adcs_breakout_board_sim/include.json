@@ -11,7 +11,7 @@
         "tasks/adcs/point_to_sun.py",
         "lib/datastores/adcs.py",
         "lib/geomag.py",
-        "lib/wmm/"
+        "lib/wmm/**/*"
     ],
     "unit_tests": [
         "lib/pin_manager_test.py",
