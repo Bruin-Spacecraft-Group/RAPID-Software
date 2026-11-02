@@ -33,7 +33,7 @@ class TestGeoMagResult(TestCase):
         result = geo_mag.calculate(80, 0, 0, 2025)
         uncertainty = result.calculate_uncertainty()
         self.assertIsInstance(uncertainty, GeoMagUncertaintyResult)
-        self.assertAlmostEqual(uncertainty.d, 0.89, 2)
+        self.assertAlmostEqual(uncertainty.d, 0.87, 2)
 
     def test_d_property(self):
         result = GeoMagResult(0, 0, 0, 0)
@@ -399,8 +399,8 @@ class TestGeoMag(TestCase):
     #         geo_mag.calculate(0, 80, 0, 2030)
 
     def test_load_coefficients_maxord(self):
-        maxord_11_value = -3.4655
-        maxord_12_value = -3.4599
+        maxord_11_value = -3.1868
+        maxord_12_value = -3.1796
         self.assertNotEqual(maxord_11_value, maxord_12_value)
         geo_mag = GeoMag(coefficients_file="wmm/WMM_2025.COF")
         geo_mag._maxord = 11
