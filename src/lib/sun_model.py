@@ -55,47 +55,39 @@ def vec_sun_from_earth(jd, fr):
     
     # Days since epoch J2000.0 [1]: D = JD - 2451545.0
     d = (jd + fr) - J2000
-    print("days since j2000: ", d) 
 
     # Mean anomaly of the Sun in degrees [1]: g = 357.529 + 0.98560028 D
     g_deg = 357.529 + 0.98560028 * d 
     g = np.deg2rad(g_deg)
-    print("g new: ", g)
 
     # Mean longitude of the Sun in degrees [1]: q = 280.459 + 0.98564736 D
     q_deg = 280.459 + 0.98564736 * d
     q = np.deg2rad(q_deg)
-    print("q new: ", q)
     
     # Geocentric apparent ecliptic longitude of the Sun (adjusted for aberration) in degrees [1]:
     # L = q + 1.915 sin(g) + 0.020 sin(2g)
     # Reducing g, q, and L to 0-360 deg is optional [1] since sin/cos are periodic
     L_deg = q_deg + 1.915 * np.sin(g) + 0.020 * np.sin(2 * g)
     L = np.deg2rad(L_deg)
-    print("L new: ", L) 
 
     # Ecliptic latitude of the Sun, approximated as 0 [1]
     b = 0
 
     # Earth to Sun distance in AU [1]: R = 1.00014 - 0.01671 cos(g) - 0.00014 cos(2g)
     r_sun = 1.00014 - 0.01671 * np.cos(g) - 0.00014 * np.cos(2 * g)
-    print("r sun new: ", r_sun) 
     
     # Mean obliquity of the ecliptic in degrees [1]: e = 23.439 - 0.00000036 D
     epsilon_deg = 23.439 - 0.00000036 * d
     epsilon = np.deg2rad(epsilon_deg) 
-    print("ep new: ", epsilon) 
 
     # Right ascension of the Sun [1]: tan(RA) = cos(e) sin(L) / cos(L)
     # atan2 keeps RA in the same quadrant as L [1]
     aarg = np.cos(epsilon) * np.sin(L)
     alpha = np.arctan2(aarg, np.cos(L))
-    print("alpha new: ", alpha, aarg) 
           
     # Declination of the Sun [1]: sin(d) = sin(e) sin(L)
     darg = np.sin(epsilon) * np.sin(L)
     delta = np.arcsin(darg)
-    print("delta new: ", delta, darg)
 
     # Compose into cartesian coordinates in J-2000 format
     r_earth_sun = r_sun * AU_KM * np.array([
