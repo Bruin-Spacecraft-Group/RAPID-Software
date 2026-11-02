@@ -5,10 +5,6 @@ if not sys.implementation.name == "circuitpython":
     import datetime
     from typing import Any, List, Tuple, Union
 
-WMM_MODEL_2015_LOWER = 2015.0
-WMM_MODEL_2015_UPPER = 2020.0
-WMM_MODEL_2020_LOWER = 2020.0
-WMM_MODEL_2020_UPPER = 2025.0
 WMM_MODEL_2025_LOWER = 2025.0
 WMM_MODEL_2025_UPPER = 2030.0
 
@@ -61,32 +57,8 @@ class GeoMagUncertaintyResult:
                 self._error_model_wmmhr_2025(result)
             else:
                 self._error_model_wmm_2025(result)
-        elif WMM_MODEL_2020_LOWER <= result.time <= WMM_MODEL_2020_UPPER:
-            self._error_model_wmm_2020(result)
-        elif WMM_MODEL_2015_LOWER <= result.time < WMM_MODEL_2015_UPPER:
-            self._error_model_wmm_2015(result)
         else:
             raise ValueError("GeoMagResult outside of known uncertainty estimates.")
-
-    def _error_model_wmm_2015(self, result: "GeoMagResult") -> None:
-        """Calculate uncertainty estimates for the WMM2015 model (2015.0 to 2020.0)."""
-        self.x = 138.0
-        self.y = 89.0
-        self.z = 165.0
-        self.h = 133.0
-        self.f = 152.0
-        self.i = 0.22
-        self.d = math.sqrt(0.23**2 + (5430 / result.h) ** 2)
-
-    def _error_model_wmm_2020(self, result: "GeoMagResult") -> None:
-        """Calculate uncertainty estimates for the WMM2020 model (2020.0 to 2025.0)."""
-        self.x = 131.0
-        self.y = 94.0
-        self.z = 157.0
-        self.h = 128.0
-        self.f = 148.0
-        self.i = 0.21
-        self.d = math.sqrt(0.26**2 + (5625 / result.h) ** 2)
 
     def _error_model_wmm_2025(self, result: "GeoMagResult") -> None:
         """Calculate uncertainty estimates for the WMM2025 model (2025.0 to 2030.0)."""
@@ -107,7 +79,6 @@ class GeoMagUncertaintyResult:
         self.f = 134.0
         self.i = 0.19
         self.d = math.sqrt(0.25**2 + (5205 / result.h) ** 2)
-
 
 class GeoMagResult:
     """The Magnetic Components values from ``GeoMag.calculate()``."""
@@ -234,10 +205,6 @@ class GeoMag:
        ==============  ==========  ===============  ==========
        WMM.COF         WMM-2025    2025.0 - 2030.0  11/13/2024
        WMM_2025.COF    WMM-2025    2025.0 - 2030.0  11/13/2024
-       WMM_2020.COF    WMM-2020    2020.0 - 2025.0  12/10/2019
-       WMM_2015v2.COF  WMM-2015v2  2015.0 - 2020.0  09/18/2018
-       WMM_2015.COF    WMM-2015    2015.0 - 2020.0  12/15/2014
-       WMM_2010.COF    WMM-2010    2010.0 - 2015.0  11/20/2009
        ==============  ==========  ===============  ==========
     """
 
@@ -348,12 +315,6 @@ class GeoMag:
 
         if 2025 <= year_value < 2030:  # noqa: PLR2004 Magic value used in comparison
             return "2025"
-        elif 2020 <= year_value < 2025:  # noqa: PLR2004 Magic value used in comparison
-            return "2020"
-        elif 2015 <= year_value < 2020:  # noqa: PLR2004 Magic value used in comparison
-            return "2015v2"
-        elif 2010 <= year_value < 2025:  # noqa: PLR2004 Magic value used in comparison
-            return "2010"
         else:
             raise ValueError(f"There are no coefficients for the year {year_value}")
 
