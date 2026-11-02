@@ -28,11 +28,6 @@ References:
 """
 
 import numpy as np
-from sgp4.api import Satrec
-try:
-    from viz import plot_sat_sun
-except ImportError:
-    pass
 import teme
 
 J2000 = 2451545.0 #For Julian Date January 1st 2000 12:00 UTC 
@@ -58,54 +53,62 @@ def vec_sun_from_earth(jd, fr):
     2026 [4, Sec. 3.3.2].
     """
     
-    #Days since epoch J2000.0 [1]: D = JD - 2451545.0
+    # Days since epoch J2000.0 [1]: D = JD - 2451545.0
     d = (jd + fr) - J2000
     print("days since j2000: ", d) 
 
-    #Mean anomaly of the Sun in degrees [1]: g = 357.529 + 0.98560028 D
+    # Mean anomaly of the Sun in degrees [1]: g = 357.529 + 0.98560028 D
     g_deg = 357.529 + 0.98560028 * d 
     g = np.deg2rad(g_deg)
     print("g new: ", g)
 
-    #Mean longitude of the Sun in degrees [1]: q = 280.459 + 0.98564736 D
+    # Mean longitude of the Sun in degrees [1]: q = 280.459 + 0.98564736 D
     q_deg = 280.459 + 0.98564736 * d
     q = np.deg2rad(q_deg)
     print("q new: ", q)
     
-    #Geocentric apparent ecliptic longitude of the Sun (adjusted for aberration) in degrees [1]:
-    #L = q + 1.915 sin(g) + 0.020 sin(2g)
-    #Reducing g, q, and L to 0-360 deg is optional [1] since sin/cos are periodic
+    # Geocentric apparent ecliptic longitude of the Sun (adjusted for aberration) in degrees [1]:
+    # L = q + 1.915 sin(g) + 0.020 sin(2g)
+    # Reducing g, q, and L to 0-360 deg is optional [1] since sin/cos are periodic
     L_deg = q_deg + 1.915 * np.sin(g) + 0.020 * np.sin(2 * g)
     L = np.deg2rad(L_deg)
     print("L new: ", L) 
 
-    #Ecliptic latitude of the Sun, approximated as 0 [1]
+    # Ecliptic latitude of the Sun, approximated as 0 [1]
     b = 0
 
-    #Earth to Sun distance in AU [1]: R = 1.00014 - 0.01671 cos(g) - 0.00014 cos(2g)
+    # Earth to Sun distance in AU [1]: R = 1.00014 - 0.01671 cos(g) - 0.00014 cos(2g)
     r_sun = 1.00014 - 0.01671 * np.cos(g) - 0.00014 * np.cos(2 * g)
     print("r sun new: ", r_sun) 
     
-    #Mean obliquity of the ecliptic in degrees [1]: e = 23.439 - 0.00000036 D
+    # Mean obliquity of the ecliptic in degrees [1]: e = 23.439 - 0.00000036 D
     epsilon_deg = 23.439 - 0.00000036 * d
     epsilon = np.deg2rad(epsilon_deg) 
     print("ep new: ", epsilon) 
 
-    #Right ascension of the Sun [1]: tan(RA) = cos(e) sin(L) / cos(L)
-    #atan2 keeps RA in the same quadrant as L [1]
+    # Right ascension of the Sun [1]: tan(RA) = cos(e) sin(L) / cos(L)
+    # atan2 keeps RA in the same quadrant as L [1]
     aarg = np.cos(epsilon) * np.sin(L)
     alpha = np.arctan2(aarg, np.cos(L))
     print("alpha new: ", alpha, aarg) 
           
-    #Declination of the Sun [1]: sin(d) = sin(e) sin(L)
+    # Declination of the Sun [1]: sin(d) = sin(e) sin(L)
     darg = np.sin(epsilon) * np.sin(L)
     delta = np.arcsin(darg)
     print("delta new: ", delta, darg)
-                
-    return r_sun, alpha, delta
+
+    # Compose into cartesian coordinates in J-2000 format
+    r_earth_sun = r_sun * AU_KM * np.array([
+        np.cos(delta) * np.cos(alpha),
+        np.cos(delta) * np.sin(alpha),
+        np.sin(delta)
+    ])
+
+    # in J2000
+    return r_earth_sun
 
 
-def vec_satellite_to_sun(jd, fr, r_sat):
+def vec_satellite_to_sun(jd, fr, r_sat, format = "teme"):
     """
     Calculating vector from satellite to Sun (in km) from Julian Date and the
     satellite position vector returned by SGP4 (Earth-centered, in km)
@@ -113,7 +116,8 @@ def vec_satellite_to_sun(jd, fr, r_sat):
     Args:
         jd: Julian Date (UT), e.g. jd as returned by sgp4.api.jday [8]
         fr: Fraction of a day added to jd, e.g. fr as returned by sgp4.api.jday [8]
-        r_sat: Earth to satellite position (km) in TEME, as returned by Satrec.sgp4 [7][8]
+        r_sat: Earth to satellite position (km) in TEME, as returned by Satrec.sgp4 [7][8], or J2000 if input as such
+        format: Claims what format r_sat is in. Defaults to TEME
 
     Returns:
         v_sat_sun: Satellite to Sun vector (km) in the equator and equinox of date
@@ -122,36 +126,12 @@ def vec_satellite_to_sun(jd, fr, r_sat):
                    of [1], so r_sat is used without a frame rotation.
     """
 
-    r_sun, alpha, delta = vec_sun_from_earth(jd, fr)
-
-    #Earth to Sun vector (km) from distance, RA, and Dec [6, Eq. (4-1)]:
-    #r * [cos(delta)cos(alpha), cos(delta)sin(alpha), sin(delta)]
-    #x points to the equinox of date, z to the north celestial pole [2]
-    #Equivalent to r * [cos(L), cos(e)sin(L), sin(e)sin(L)] [4, Eq. (3.46)][6, Alg. 29]
-    r_earth_sun = r_sun * AU_KM * np.array([
-        np.cos(delta) * np.cos(alpha),
-        np.cos(delta) * np.sin(alpha),
-        np.sin(delta)
-    ])
+    # handle conversion of the r_sat
+    if format == "teme":
+        r_sat = teme.teme_to_j2000(r_sat)
 
     #Satellite to Sun = Earth to Sun - Earth to satellite [4, Eq. (3.35)]
-    v_sat_sun = r_earth_sun - r_sat
+    v_sat_sun = vec_sun_from_earth(jd, fr) - r_sat
 
+    # in J2000
     return v_sat_sun
-
-if __name__ == '__main__':
-        jd, fr = 2458826.5, 0.600
-        s = '1 25544U 98067A   19343.69339541  .00001764  00000-0  38792-4 0  9991'
-        t = '2 25544  51.6439 211.2001 0007417  17.6667  85.6398 15.50103472202482'
-        satellite = Satrec.twoline2rv(s, t)
-        sat_vec = teme.teme_to_j2000(satellite.sgp4(jd,fr)[1], jd, fr)
-        print("error: " + str(satellite.sgp4(jd,fr)[0]))
-        print('Altitude: ' +str(np.sqrt(sat_vec[0]**2 + sat_vec[1]**2 + sat_vec[2]**2))) 
-        print(sat_vec)
-
-        print("Returned: " + str(vec_sun_from_earth(jd, fr)))
-        sun_vec = vec_satellite_to_sun(jd, fr, sat_vec)
-
-        fig, u, angle = plot_sat_sun(sat_vec, sun_vec)
-        
-                
