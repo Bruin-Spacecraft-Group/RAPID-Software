@@ -353,7 +353,7 @@ class TestGeoMag(TestCase):
         with patch("geomag.open", m):
             geo_mag = GeoMag()
             model_filename = geo_mag._get_model_filename()
-            expected = get_os_based_test_path("wmm/WMM.COF")
+            expected = get_os_based_test_path("WMM.COF")
             self.assertTrue(
                 model_filename.endswith(expected),
                 f"{model_filename!r} does not end with {expected!r}",
