@@ -9,11 +9,13 @@
         "tasks/adcs/detumble.py",
         "tasks/adcs/point_to_earth.py",
         "tasks/adcs/point_to_sun.py",
-        "lib/datastores/adcs.py"
+        "lib/datastores/adcs.py",
+        "lib/geomag.py"
     ],
     "unit_tests": [
         "lib/pin_manager_test.py",
         "lib/custom_module_mocking.py",
-        "lib/quaternion_test.py"
+        "lib/quaternion_test.py",
+        "lib/wmm_test.py"
     ]
 }

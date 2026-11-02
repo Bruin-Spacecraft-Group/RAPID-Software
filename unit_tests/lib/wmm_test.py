@@ -3,7 +3,7 @@ from decimal import Decimal
 from unittest import TestCase
 from unittest.mock import DEFAULT, mock_open, patch
 
-from src.lib.pygeomag.geomag import (
+from geomag import (
     BlackoutZoneException,
     CautionZoneException,
     GeoMag,
@@ -11,7 +11,7 @@ from src.lib.pygeomag.geomag import (
     GeoMagUncertaintyResult,
 )
 
-from src.lib.pygeomag.wmm.wmm_2025 import WMM_2025
+from wmm.wmm_2025 import WMM_2025
 
 TEST_STYLE_0 = 0
 TEST_STYLE_1 = 1
