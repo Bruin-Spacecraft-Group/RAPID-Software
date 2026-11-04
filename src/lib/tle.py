@@ -283,7 +283,7 @@ class Satrecs:
         print(self.jdsatepoch, self.jdsatepoch_f)
 
         sgp4_init(self, self.set_num, jd_full-EPOCH0, self.bstar,
-                  self.dn, self.ddn, self.ecc, self.argp, self.inc, self.n,
+                  self.dn, self.ddn, self.ecc, self.argp, self.inc, self.mo,
                   self.raan)
         
         print(self.jdsatepoch, self.jdsatepoch_f)
