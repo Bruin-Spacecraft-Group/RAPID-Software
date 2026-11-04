@@ -241,6 +241,8 @@ class Satrec:
         else:
             raise ValueError("TLE data must contain two element lines and an optional name")
 
+        return cls.from_tle_lines(name, line1, line2)
+
     @classmethod
     def sgp4_init(cls, tle):
         """
@@ -328,6 +330,8 @@ class Satrec:
         """
         if self.error == 2:
             return (f'mean motion {0:f} is less than zero').format(self.n)
+
+        return ""
 
 def test():
     """

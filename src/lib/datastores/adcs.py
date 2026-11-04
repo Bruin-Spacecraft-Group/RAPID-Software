@@ -55,7 +55,7 @@ class Time:
         self.time_since_last_mekf = 0.0  # dt from tasks/mekf
 
     @classmethod
-    # pylint: disable = too-many-arguments
+    # pylint: disable = too-many-positional-arguments
     def from_ymdhms(cls, year, mon, day, hr, minute, sec):
         """
         Creating a time object from just year, month, day, hour, minute, second
