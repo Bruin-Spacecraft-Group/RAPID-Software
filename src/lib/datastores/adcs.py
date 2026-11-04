@@ -4,7 +4,7 @@ ADCS system for all tasks to update and use. Readings that have not yet been ini
 are set to `None` throughout this module.
 """
 
-# import tle
+import tle
 
 class Datastore:
     """
@@ -34,23 +34,43 @@ class Datastore:
     )
 
     def __init__(self):
-        self.time: AdcsTime = AdcsTime()
+        self.time: Time = Time()
         self.sensor: SensorData = SensorData()
         self.quaternion = (
             None  # Quaternion representing attitude from body frame to inertial frame
         )
         self.mode = self.DETUMBLE
-        # self.satrecs: tle.Satrec = tle.Satrec.from_tle_str(TLE)
+        self.satrec: tle.Satrec = tle.Satrec.from_tle_str(self.TLE)
 
-class AdcsTime:
+class Time:
     """
     Time helper class
     """
+
     def __init__(self):
+        self.ymdhms = (0, 0, 0, 0, 0, 0) # year month day hour minute second
         self.current_time = None
         self.last_cdh_update = None
         self.update_interval = 1.0  # secondsgit
         self.time_since_last_mekf = 0.0  # dt from tasks/mekf
+
+    @classmethod
+    # pylint: disable = too-many-arguments
+    def from_ymdhms(cls, year, mon, day, hr, minute, sec):
+        """
+        Creating a time object from just year, month, day, hour, minute, second
+        Minimal class to be used in time_sgp4 that returns a tuple with said values
+        """
+        obj = cls()
+        obj.ymdhms = (year, mon, day, hr, minute, sec)
+        return obj
+
+    def time_sgp4(self):
+        """
+        Time function to return the time in a format that is minimal for SGP4
+        Returns a tuple of year, month, day, hour, minute, second
+        """
+        return self.ymdhms
 
 class SensorData:
     """

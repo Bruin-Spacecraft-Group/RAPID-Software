@@ -35,22 +35,22 @@ def _initl(xke, j2,
     #  sgp4fix identify constants and allow alternate values
     #  only xke and j2 are used here so pass them in directly
     #  tumin, mu, radiusearthkm, xke, j2, j3, j4, j3oj2 = whichconst
-    x2o3   = 2.0 / 3.0;
+    x2o3   = 2.0 / 3.0
     tau = np.pi*2
 
     #  ------------- calculate auxillary epoch quantities ----------
-    eccsq  = ecc * ecc;
-    omeosq = 1.0 - eccsq;
-    rteosq = np.sqrt(omeosq);
-    cosio  = np.cos(inclo);
-    cosio2 = cosio * cosio;
+    eccsq  = ecc * ecc
+    omeosq = 1.0 - eccsq
+    rteosq = np.sqrt(omeosq)
+    cosio  = np.cos(inclo)
+    cosio2 = cosio * cosio
 
     #  ------------------ un-kozai the mean motion -----------------
-    ak    = pow(xke / no, x2o3);
-    d1    = 0.75 * j2 * (3.0 * cosio2 - 1.0) / (rteosq * omeosq);
-    del_  = d1 / (ak * ak);
+    ak    = pow(xke / no, x2o3)
+    d1    = 0.75 * j2 * (3.0 * cosio2 - 1.0) / (rteosq * omeosq)
+    del_  = d1 / (ak * ak)
     adel  = ak * (1.0 - del_ * del_ - del_ *
-            (1.0 / 3.0 + 134.0 * del_ * del_ / 81.0));
+            (1.0 / 3.0 + 134.0 * del_ * del_ / 81.0))
     del_  = d1/(adel * adel)
     no    = no / (1.0 + del_)
 
@@ -62,14 +62,14 @@ def _initl(xke, j2,
     posq  = po * po
     rp    = ao * (1.0 - ecc)
 
-    ts70  = epoch - 7305.0;
-    ds70 = (ts70 + 1.0e-8) // 1.0;
-    tfrac = ts70 - ds70;
+    ts70  = epoch - 7305.0
+    ds70 = (ts70 + 1.0e-8) // 1.0
+    tfrac = ts70 - ds70
     #  find greenwich location at epoch
-    c1    = 1.72027916940703639e-2;
-    thgr70= 1.7321343856509374;
-    fk5r  = 5.07551419432269442e-15;
-    c1p2p = c1 + tau;
+    c1    = 1.72027916940703639e-2
+    thgr70= 1.7321343856509374
+    fk5r  = 5.07551419432269442e-15
+    c1p2p = c1 + tau
     gsto  = (thgr70 + c1*ds70 + c1p2p*tfrac + ts70*ts70*fk5r) % tau
     if gsto < 0.0:
         gsto = gsto + tau
@@ -92,7 +92,7 @@ def sgp4_update(satrec, tsince):
     # -- Set mathematical constants
     x2o3  = 2.0 / 3.0
     tau = 2.0 * np.pi
-    vkmpersec = satrec.radiusearthkm * satrec.xke/60.0;
+    vkmpersec = satrec.radiusearthkm * satrec.xke/60.0
 
     satrec.t = tsince
 
@@ -133,7 +133,7 @@ def sgp4_update(satrec, tsince):
     inclm = satrec.inclo
 
     if nm <= 0.0:
-        satrec.error = satrec.MOTION
+        satrec.error = MOTION
         return False, False
 
     am = pow((satrec.xke / nm),x2o3) * tempa * tempa
@@ -141,7 +141,7 @@ def sgp4_update(satrec, tsince):
     em = em - tempe
 
     if em >= 1.0 or em < 0.0:
-        satrec.error = satrec.ECCENTRICITY
+        satrec.error = ECCENTRICITY
 
         return False, False
 
@@ -207,7 +207,7 @@ def sgp4_update(satrec, tsince):
     el2   = axnl*axnl + aynl*aynl
     pl    = am*(1.0-el2)
     if pl < 0.0:
-        satrec.error = satrec.SEMIRECT
+        satrec.error = SEMIRECT
 
         return False, False
 
@@ -261,8 +261,8 @@ def sgp4_update(satrec, tsince):
             (mvt * uz + rvdot * vz) * vkmpersec)
 
     if mrt < 1.0:
-            satrec.error = satrec.DECAY
-            return False, False
+        satrec.error = DECAY
+        return False, False
 
     return r, v
 

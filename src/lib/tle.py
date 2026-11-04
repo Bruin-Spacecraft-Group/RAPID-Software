@@ -5,6 +5,7 @@ Adapted from the TLE-tools library by @FedericoStra on GitHub
 """
 
 from sgp4 import sgp4_init, sgp4_update
+from datastores.adcs import Time
 
 try:
     import ulab.numpy as np  # For CircuitPython
@@ -36,7 +37,7 @@ def _days2mdhms(year, days, round_to_microsecond=6):
     microseconds if ``round_to_microsecond`` is true.
     """
     day_of_year, day_fraction = divmod(days, 1.0)
-    
+
     second = day_fraction * 86400.0
     if round_to_microsecond:
         second = round(second, round_to_microsecond)
@@ -84,10 +85,12 @@ def _parse_float(s):
     """
     return float(s[0] + '.' + s[1:6] + 'e' + s[6:8])
 
-def _sgp4_jday(year, mon, day, hr, minute, sec):
+def _sgp4_jday(time):
     """
     Converts jdsatepoch into a compatible number for sgp4
     """
+
+    year, mon, day, hr, minute, sec = time
 
     return (367.0 * year -
             7.0 * (year + ((mon + 9.0) // 12.0)) * 0.25 // 1.0 +
@@ -96,12 +99,15 @@ def _sgp4_jday(year, mon, day, hr, minute, sec):
             ((sec / 60.0 + minute) / 60.0 + hr) / 24.0
             )
 
-def jday(year, mon, day, hr, minute, sec):
+def jday(time):
     """
     From a date, return a Julian date in its date + fractional form
 
     Used to build the jd, fr parameters in the function call of sgp4_update
     """
+
+    year, mon, day, hr, minute, sec = time
+
     jd = (367.0 * year
          - 7 * (year + ((mon + 9) // 12.0)) * 0.25 // 1.0
 	   + 275 * mon / 9.0 // 1.0
@@ -159,7 +165,6 @@ class Satrec:
     """
 
     def __init__(self):
-
         self.name = ""
 
         self.norad = ""
@@ -179,10 +184,14 @@ class Satrec:
         self.ecc = 0.0
         self.argp = 0.0
         self.mo = 0.0
-        self.n = 0.0 # mean motion
+        self.n = 0.0
         self.rev_num = 0
 
         self.tle_str = ""
+        self.error = ""
+
+        self.jdsatepoch = 0.0
+        self.jdsatepoch_f = 0.0
 
     @classmethod
     def from_tle_lines(cls, name, line1, line2):
@@ -260,19 +269,16 @@ class Satrec:
         year = self.epoch_year
 
         mon, day, hr, minute, sec = _days2mdhms(year, self.epoch_day)
-        jd_full = _sgp4_jday(year, mon, day, hr, minute, sec)
+        time = Time.from_ymdhms(year, mon, day, hr, minute, sec)
+        jd_full = _sgp4_jday(time)
 
         # Split into two-part representation
         self.jdsatepoch   = np.floor(jd_full-0.5) + 0.5   # noon-to-noon JD boundary
         self.jdsatepoch_f = jd_full - self.jdsatepoch
 
-        print(self.jdsatepoch, self.jdsatepoch_f)
-
         sgp4_init(self, self.set_num, jd_full-EPOCH0, self.bstar,
                   self.dn, self.ddn, self.ecc, self.argp, self.inc, self.mo,
                   self.raan)
-        
-        print(self.jdsatepoch, self.jdsatepoch_f)
 
         return self
 
@@ -311,11 +317,8 @@ class Satrec:
 
         tsince = ((jd - self.jdsatepoch) * MIN_PER_DAY +
                   (fr - self.jdsatepoch_f) * MIN_PER_DAY)
-        print(tsince)
 
         r, v = sgp4_update(self, tsince)
-
-        print(tsince, _sgp4_jday(2026, 5, 3, 0, 0, 0))
 
         return self.error, r, v
 
@@ -323,19 +326,25 @@ class Satrec:
         """
         Return error message from current self.error (when polled)
         """
-        if self.error == self.MOTION:
+        if self.error == 2:
             return (f'mean motion {0:f} is less than zero').format(self.n)
 
-ISS_TLE = "ISS (ZARYA)\n1 25544U 98067A   26121.81277072  .00006771  00000-0  13067-3 0  9997\n2 25544  51.6311 169.6452 0007227  12.7206 347.3964 15.49051775564564"
-s = "1 25544U 98067A   26121.81277072  .00006771  00000-0  13067-3 0  9997"
-t = "2 25544  51.6311 169.6452 0007227  12.7206 347.3964 15.49051775564564"
+def test():
+    """
+    Test script to test the sgp4 script using the ISS TLE
+    """
+    iss_tle = """ISS (ZARYA)
+    \n1 25544U 98067A   26121.81277072  .00006771  00000-0  13067-3 0  9997 
+    \n2 25544  51.6311 169.6452 0007227  12.7206 347.3964 15.49051775564564"""
 
-
-if __name__ == "__main__":
     sat: Satrec = Satrec.from_tle_str(
-        ISS_TLE
+        iss_tle
     )
 
     sgp4_obj : Satrec= Satrec.sgp4_init(sat)
-    error, r, v = sgp4_obj.sgp4_update(*jday(2026, 5, 3, 0, 0, 0))
+    time = Time.from_ymdhms(2026, 5, 3, 0, 0, 0)
+    error, r, v = sgp4_obj.sgp4_update(*jday(time))
     print(error, r, v)
+
+if __name__ == "__main__":
+    test()
