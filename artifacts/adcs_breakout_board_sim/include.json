@@ -10,14 +10,12 @@
         "tasks/adcs/point_to_earth.py:adcs/point_to_earth.py",
         "tasks/adcs/point_to_sun.py:adcs/point_to_sun.py",
         "lib/datastores/adcs.py:datastores/adcs.py",
-        "lib/tle.py:tle.py",
-        "lib/sgp4.py:sgp4.py"
+        "lib/tle.py:tle.py"
     ],
     "unit_tests": [
         "lib/pin_manager_test.py:pin_manager_test.py",
         "lib/custom_module_mocking.py:custom_module_mocking.py",
-        "lib/quaternion_test.py:quaternion_test.py",
-        "lib/sgp4_test.py:sgp4_test.py"
+        "lib/quaternion_test.py:quaternion_test.py"
     ],
     "submodules":[
         "Adafruit_CircuitPython_Ticks/adafruit_ticks.py:adafruit_ticks.py",

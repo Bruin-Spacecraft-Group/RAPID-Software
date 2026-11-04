@@ -1,7 +1,7 @@
 """
-Functions and Variables used by ADCS to update and use TLE (two-line element data)
+Functions and Variables to update and use TLE (two-line element data)
 
-Adapted from the TLE-tools library by @FedericoStra on GitHub for ulab, 
+Adapted from the TLE-tools library by @FedericoStra on GitHub
 """
 
 from sgp4 import sgp4_init, sgp4_update
@@ -113,7 +113,6 @@ def jday(year, mon, day, hr, minute, sec):
 class Satrec:
     """
     Satellite record object
-    Includes parameters, constants that are commonly used across the sgp4 logical flow
 
     In this implementation, built from TLE data
 
@@ -159,50 +158,31 @@ class Satrec:
         Revolution number.
     """
 
-    # Error codes
-    ECCENTRICITY = 1 # eccentricity is not within 0-1
-    MOTION = 2 # error in propagating mean motion
-    SEMIRECT = 4 # apoapsis, periapsis characteristics error
-    DECAY = 6 # orbit has decayed
+    def __init__(self):
 
-    def __init__(self, name:str,
-                 # ID parameters, Line 1
-                 norad:str, classification:str, int_desig:str,
-                 # time (derivative) parameters, line 1
-                 epoch_year:int, epoch_day:float, dn:float, ddn:float, bstar:float,
-                 ephtype: str, set_num:int,
-                 # keplerian parameters, line 2
-                 inc:float, raan:float, ecc:float, argp:float, mo:float, n:float, rev_num:int,
-                 # for the purposes of keeping the tle around as future-proofing
-                 tle_str:str ):
+        self.name = ""
 
-        self.name = str.strip(name)
+        self.norad = ""
+        self.classification = ""
+        self.int_desig = ""
 
-        self.norad = str.strip(norad)
-        self.classification = classification
-        self.int_desig = str.strip(int_desig)
+        self.epoch_year = 0
+        self.epoch_day = 0.0
+        self.dn = 0.0
+        self.ddn = 0.0
+        self.bstar = 0.0
+        self.ephtype = ""
+        self.set_num = 0
 
-        self.epoch_year = _conv_year(epoch_year)
-        self.epoch_day = epoch_day
-        self.dn = dn
-        self.ddn = ddn
-        self.bstar = bstar
-        self.ephtype = ephtype
-        self.set_num = int(set_num)
+        self.inc = 0.0
+        self.raan = 0.0
+        self.ecc = 0.0
+        self.argp = 0.0
+        self.mo = 0.0
+        self.n = 0.0 # mean motion
+        self.rev_num = 0
 
-        self.inc = inc
-        self.raan = raan
-        self.ecc = ecc
-        self.argp = argp
-        self.mo = mo
-        self.n = n # mean motion
-        self.rev_num = int(rev_num)
-
-        self.tle_str = tle_str
-
-        # for sgp
-        self.jdsatepoch = 0
-        self.jdsatepoch_f = 0
+        self.tle_str = ""
 
     @classmethod
     def from_tle_lines(cls, name, line1, line2):
@@ -211,38 +191,46 @@ class Satrec:
         All the attributes parsed from the TLE are expressed in the same units that
         are used in the TLE format.
         """
-        return cls(
-            name=name,
-            norad=line1[2:7],
-            classification=line1[7] or 'U',
-            int_desig=line1[9:17],
-            epoch_year=line1[18:20],
-            epoch_day=float(line1[20:32]),
-            dn=float(line1[33:43]),
-            ddn=_parse_float(line1[44:52]),
-            bstar=_parse_float(line1[53:61]),
-            ephtype = line1[62],
-            set_num=line1[64:68],
-            inc=float(line2[8:16]),
-            raan=float(line2[17:25]),
-            ecc=_parse_decimal(line2[26:33]),
-            argp=float(line2[34:42]),
-            mo=float(line2[43:51]),
-            n=float(line2[52:63]),
-            rev_num=line2[63:68],
-            tle_str=name+line1+line2)
+
+        sat = cls()
+        sat.name = name
+        sat.norad = line1[2:7]
+        sat.classification = line1[7] or 'U'
+        sat.int_desig = line1[9:17].strip()
+        sat.epoch_year = _conv_year(line1[18:20])
+        sat.epoch_day = float(line1[20:32])
+        sat.dn = float(line1[33:43])
+        sat.ddn = _parse_float(line1[44:52])
+        sat.bstar = _parse_float(line1[53:61])
+        sat.ephtype = int(line1[62])
+        sat.set_num = int(line1[64:68])
+        sat.inc = float(line2[8:16])
+        sat.raan = float(line2[17:25])
+        sat.ecc = _parse_decimal(line2[26:33])
+        sat.argp = float(line2[34:42])
+        sat.mo = float(line2[43:51])
+        sat.n = float(line2[52:63])
+        sat.rev_num = int(line2[63:68])
+        sat.tle_str = name + line1 + line2
+        return sat
 
     @classmethod
     def from_tle_file(cls, filename):
         """Load TLE from a file."""
-        if isinstance(filename, str):
-            with open(filename) as fp:
-                return cls.from_tle_lines(*fp.readlines[:2])
+        with open(filename, encoding="utf-8") as fp:
+            return cls.from_tle_str(fp.read())
 
     @classmethod
     def from_tle_str(cls, string):
         """Load TLE from a string."""
-        return cls.from_tle_lines(*string.split('\n')[:3])
+        lines = [line.strip() for line in string.splitlines() if line.strip()]
+        if len(lines) == 3:
+            name, line1, line2 = lines
+        elif len(lines) == 2:
+            name = ""
+            line1, line2 = lines
+        else:
+            raise ValueError("TLE data must contain two element lines and an optional name")
 
     @classmethod
     def sgp4_init(cls, tle):
@@ -291,7 +279,7 @@ class Satrec:
     def to_array(self):
         """
         Return 2D array of TLE values
-        
+
         Indexed as 
         [line, col]
 

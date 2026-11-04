@@ -4,12 +4,17 @@ ADCS system for all tasks to update and use. Readings that have not yet been ini
 are set to `None` throughout this module.
 """
 
-import tle
+# import tle
 
 class Datastore:
     """
     Datastore class for adcs processes. Holds time, sensor, and attitude data to be used system-wide
     """
+
+    # TLE String
+    TLE = """ISS (ZARYA)\n
+1 25544U 98067A   26166.51237796  .00007685  00000-0  14626-3 0  9999\n
+2 25544  51.6337 308.3821 0004850 189.0196 171.0706 15.49243792571497"""
 
     # Action types
     DETUMBLE = 0
@@ -35,7 +40,7 @@ class Datastore:
             None  # Quaternion representing attitude from body frame to inertial frame
         )
         self.mode = self.DETUMBLE
-        self.tle: tle.TLE = tle.TLE()
+        # self.satrecs: tle.Satrec = tle.Satrec.from_tle_str(TLE)
 
 class AdcsTime:
     """
