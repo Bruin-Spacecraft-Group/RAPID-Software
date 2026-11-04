@@ -4,9 +4,7 @@ Functions and Variables used by ADCS to update and use TLE (two-line element dat
 Adapted from the TLE-tools library by @FedericoStra on GitHub for ulab, 
 """
 
-from sgp4s import sgp4_init, sgp4_update
-
-from sgp4.api import Satrec
+from sgp4 import sgp4_init, sgp4_update
 
 try:
     import ulab.numpy as np  # For CircuitPython
@@ -112,7 +110,7 @@ def jday(year, mon, day, hr, minute, sec):
     fr = (sec + minute * 60.0 + hr * 3600.0) / 86400.0
     return jd, fr
 
-class Satrecs:
+class Satrec:
     """
     Satellite record object
     Includes parameters, constants that are commonly used across the sgp4 logical flow
@@ -346,15 +344,10 @@ t = "2 25544  51.6311 169.6452 0007227  12.7206 347.3964 15.49051775564564"
 
 
 if __name__ == "__main__":
-    sat: Satrecs = Satrecs.from_tle_str(
+    sat: Satrec = Satrec.from_tle_str(
         ISS_TLE
     )
 
-    satel = Satrec.twoline2rv(s, t)
-
-    e, r_o, v_o = satel.sgp4(*jday(2026, 5, 3, 0, 0, 0))
-
-    sgp4_obj : Satrecs= Satrecs.sgp4_init(sat)
+    sgp4_obj : Satrec= Satrec.sgp4_init(sat)
     error, r, v = sgp4_obj.sgp4_update(*jday(2026, 5, 3, 0, 0, 0))
-    print(e, r_o, v_o)
     print(error, r, v)
