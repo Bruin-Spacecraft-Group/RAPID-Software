@@ -59,7 +59,7 @@ for app in os.listdir(artifacts_dir):
         os.path.join(".", "config")
     )
     result = subprocess.run(
-        [sys.executable, "-m", "pytest"], cwd=test_app_dir, env=test_env
+        [sys.executable, "-P", "-m", "pytest"], cwd=test_app_dir, env=test_env
     ).returncode
     if result != 0:
         tests_passed = False
