@@ -6,6 +6,7 @@ import sys
 
 import deploy_to_usb
 
+sys.path.append(os.path.dirname(__file__))
 
 def RED(text):
     return "\033[91m" + text + "\033[0m"
@@ -59,7 +60,7 @@ for app in os.listdir(artifacts_dir):
         os.path.join(".", "config")
     )
     result = subprocess.run(
-        [sys.executable, "-P", "-m", "pytest"], cwd=test_app_dir, env=test_env
+        [sys.executable, "-P", "-m", "pytest", "--import-mode=importlib"], cwd=test_app_dir, env=test_env
     ).returncode
     if result != 0:
         tests_passed = False
