@@ -6,7 +6,6 @@ import sys
 
 import deploy_to_usb
 
-sys.path.append(os.path.dirname(__file__))
 
 def RED(text):
     return "\033[91m" + text + "\033[0m"
