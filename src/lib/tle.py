@@ -4,7 +4,7 @@ Functions and Variables to update and use TLE (two-line element data)
 Adapted from the TLE-tools library by @FedericoStra on GitHub
 """
 
-from tasks.adcs.sgp4 import sgp4_init, sgp4_update
+from sgp4 import sgp4_init, sgp4_update
 from datastores.adcs import Time
 
 try:

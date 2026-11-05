@@ -150,8 +150,7 @@ def sgp4_update(satrec, tsince):
 
         return False, False
 
-    if em < 1.0e-6:
-        em  = 1.0e-6
+    em = max(em, 1e-06)
     mm     = mm + satrec.n * templ
     xlm    = mm + argpm + nodem
     emsq   = em * em
@@ -216,54 +215,52 @@ def sgp4_update(satrec, tsince):
 
         return False, False
 
-    else:
+    rl     = am * (1.0 - ecose)
+    rdotl  = np.sqrt(am) * esine/rl
+    rvdotl = np.sqrt(pl) / rl
+    betal  = np.sqrt(1.0 - el2)
+    temp   = esine / (1.0 + betal)
+    sinu   = am / rl * (sineo1 - aynl - axnl * temp)
+    cosu   = am / rl * (coseo1 - axnl + aynl * temp)
+    su     = np.atan2(sinu, cosu)
+    sin2u  = (cosu + cosu) * sinu
+    cos2u  = 1.0 - 2.0 * sinu * sinu
+    temp   = 1.0 / pl
+    temp1  = 0.5 * satrec.j2 * temp
+    temp2  = temp1 * temp
 
-        rl     = am * (1.0 - ecose)
-        rdotl  = np.sqrt(am) * esine/rl
-        rvdotl = np.sqrt(pl) / rl
-        betal  = np.sqrt(1.0 - el2)
-        temp   = esine / (1.0 + betal)
-        sinu   = am / rl * (sineo1 - aynl - axnl * temp)
-        cosu   = am / rl * (coseo1 - axnl + aynl * temp)
-        su     = np.atan2(sinu, cosu)
-        sin2u  = (cosu + cosu) * sinu
-        cos2u  = 1.0 - 2.0 * sinu * sinu
-        temp   = 1.0 / pl
-        temp1  = 0.5 * satrec.j2 * temp
-        temp2  = temp1 * temp
+    #  -------------- update for short period periodics ------------
+    mrt   = rl * (1.0 - 1.5 * temp2 * betal * satrec.con41) + \
+            0.5 * temp1 * satrec.x1mth2 * cos2u
+    su    = su - 0.25 * temp2 * satrec.x7thm1 * sin2u
+    xnode = nodep + 1.5 * temp2 * cosip * sin2u
+    xinc  = xincp + 1.5 * temp2 * cosip * sinip * cos2u
+    mvt   = rdotl - nm * temp1 * satrec.x1mth2 * sin2u / satrec.xke
+    rvdot = rvdotl + nm * temp1 * (satrec.x1mth2 * cos2u +
+            1.5 * satrec.con41) / satrec.xke
 
-        #  -------------- update for short period periodics ------------
-        mrt   = rl * (1.0 - 1.5 * temp2 * betal * satrec.con41) + \
-                0.5 * temp1 * satrec.x1mth2 * cos2u
-        su    = su - 0.25 * temp2 * satrec.x7thm1 * sin2u
-        xnode = nodep + 1.5 * temp2 * cosip * sin2u
-        xinc  = xincp + 1.5 * temp2 * cosip * sinip * cos2u
-        mvt   = rdotl - nm * temp1 * satrec.x1mth2 * sin2u / satrec.xke
-        rvdot = rvdotl + nm * temp1 * (satrec.x1mth2 * cos2u +
-                1.5 * satrec.con41) / satrec.xke
+    #  --------------------- orientation vectors -------------------
+    sinsu =  np.sin(su)
+    cossu =  np.cos(su)
+    snod  =  np.sin(xnode)
+    cnod  =  np.cos(xnode)
+    sini  =  np.sin(xinc)
+    cosi  =  np.cos(xinc)
+    xmx   = -snod * cosi
+    xmy   =  cnod * cosi
+    ux    =  xmx * sinsu + cnod * cossu
+    uy    =  xmy * sinsu + snod * cossu
+    uz    =  sini * sinsu
+    vx    =  xmx * cossu - cnod * sinsu
+    vy    =  xmy * cossu - snod * sinsu
+    vz    =  sini * cossu
 
-        #  --------------------- orientation vectors -------------------
-        sinsu =  np.sin(su)
-        cossu =  np.cos(su)
-        snod  =  np.sin(xnode)
-        cnod  =  np.cos(xnode)
-        sini  =  np.sin(xinc)
-        cosi  =  np.cos(xinc)
-        xmx   = -snod * cosi
-        xmy   =  cnod * cosi
-        ux    =  xmx * sinsu + cnod * cossu
-        uy    =  xmy * sinsu + snod * cossu
-        uz    =  sini * sinsu
-        vx    =  xmx * cossu - cnod * sinsu
-        vy    =  xmy * cossu - snod * sinsu
-        vz    =  sini * cossu
-
-        #  --------- position and velocity (in km and km/sec) ----------
-        _mr = mrt * satrec.radiusearthkm
-        r = (_mr * ux, _mr * uy, _mr * uz)
-        v = ((mvt * ux + rvdot * vx) * vkmpersec,
-            (mvt * uy + rvdot * vy) * vkmpersec,
-            (mvt * uz + rvdot * vz) * vkmpersec)
+    #  --------- position and velocity (in km and km/sec) ----------
+    _mr = mrt * satrec.radiusearthkm
+    r = (_mr * ux, _mr * uy, _mr * uz)
+    v = ((mvt * ux + rvdot * vx) * vkmpersec,
+        (mvt * uy + rvdot * vy) * vkmpersec,
+        (mvt * uz + rvdot * vz) * vkmpersec)
 
     if mrt < 1.0:
         satrec.error = DECAY

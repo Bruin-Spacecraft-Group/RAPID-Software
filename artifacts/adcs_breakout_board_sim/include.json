@@ -9,9 +9,9 @@
         "tasks/adcs/detumble.py:adcs/detumble.py",
         "tasks/adcs/point_to_earth.py:adcs/point_to_earth.py",
         "tasks/adcs/point_to_sun.py:adcs/point_to_sun.py",
-        "tasks/adcs/sgp4.py:sgp4.py",
         "lib/datastores/adcs.py:datastores/adcs.py",
-        "lib/tle.py:tle.py"
+        "lib/tle.py:tle.py",
+        "lib/sgp4.py:sgp4.py"
     ],
     "unit_tests": [
         "lib/pin_manager_test.py:pin_manager_test.py",
