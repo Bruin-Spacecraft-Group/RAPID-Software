@@ -1,8 +1,13 @@
 """
 Simplified General Perturbations Model 4 Implementation for Orbit Propagation
+Original code by Brandon-Rhodes python-sgp4
 
 As outlined in https://celestrak.org/publications/AIAA/2008-6770/AIAA-2008-6770.pdf
 """
+
+# Disable some linter issues across the *otherwise verified* file
+# pylint: disable=too-many-arguments,too-many-positional-arguments,too-many-locals,too-many-statements
+# pylint: disable=multiple-statements,unnecessary-semicolon
 
 # Error codes
 ECCENTRICITY = 1 # eccentricity is not within 0-1
@@ -344,12 +349,13 @@ def sgp4_init(satrec, satn,   epoch,
     satrec.alta = satrec.a*(1.0 + satrec.ecc) - 1.0
     satrec.altp = satrec.a*(1.0 - satrec.ecc) - 1.0
 
+    sfour  = ss
+    qzms24 = qzms2t
+
     if omeosq >= 0.0 or satrec.n >= 0.0:
         satrec.isimp = 0
         if rp < 220.0 / satrec.radiusearthkm + 1.0:
             satrec.isimp = 1
-        sfour  = ss
-        qzms24 = qzms2t
         perige = (rp - 1.0) * satrec.radiusearthkm;
 
         #  - for perigees below 156 km, s and qoms2t are altered -
@@ -363,7 +369,7 @@ def sgp4_init(satrec, satn,   epoch,
             qzms24 = qzms24temp * qzms24temp * qzms24temp * qzms24temp;
             sfour  = sfour / satrec.radiusearthkm + 1.0;
             print(perige)
-    
+
     pinvsq = 1.0 / posq
 
     tsi  = 1.0 / (ao - sfour)
