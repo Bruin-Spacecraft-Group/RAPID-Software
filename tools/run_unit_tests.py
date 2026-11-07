@@ -53,6 +53,13 @@ for app in os.listdir(artifacts_dir):
     print(CYAN(f"Generating tests for artifact {app}..."))
     test_app_dir = deploy_to_usb.deploy_with_settings(app, None, True, True)
 
+    code_py = os.path.join(test_app_dir, "code.py")
+    if os.path.exists(code_py):
+        os.remove(code_py)
+        # os.rename(code_py, os.path.join(test_app_dir, "main.py")) 
+        #* note if code.py is ever imported by a unittest 
+        #* (unlikely), this will keep the file available as "main.py"
+
     print(CYAN(f"Running pytest for deployment of {app}..."))
     test_env = os.environ.copy()
     test_env["RAPID-0-Software_test-config"] = os.path.abspath(
