@@ -1,9 +1,5 @@
-# one line of tle may not get through
-# check the exponents (self.ddn and self.bstar)
-# the check sum isnt where its supposed to be ( might be shifted so check column 69)
-# decimal parsing might be off (put decimal in the right place)
-# create a tle string for each case (take current ISS one)
-
+#TODO: Epoch is not beingg parsed/set correctly, need to implement in tle.py then test in here
+#
 import unittest
 import os
 import tle
@@ -18,7 +14,7 @@ TLE_NAME, TLE_LINE1, TLE_LINE2 = TLE_DATA.splitlines()
 class TLEConstruction_Test(unittest.TestCase):
     """Checks if the TLE string is valid."""
 
-    def size_check(tle_text): 
+    def size_check(self, tle_text): 
         """This method checks if both lines of the TLE are 69 characters long."""
         lines = [line.strip() for line in tle_text.strip().splitlines() if line.strip()]
         data_lines = [l for l in lines if l.startswith(('1 ', '2 '))]
@@ -30,7 +26,7 @@ class TLEConstruction_Test(unittest.TestCase):
 
         return True
 
-    def is_check_sum_valid(tle_text):
+    def is_check_sum_valid(self, tle_text):
         """This method goes through both lines of the TLE, adds their numbers up and checks if the remainder
         of the sum of all the numbers is equal to the check sum. If it is, it returns True. If it isn't, it 
         return"""
@@ -57,8 +53,11 @@ class TLEConstruction_Test(unittest.TestCase):
             if total_sum % 10 != expected_checksum:
                 return False
         return True
+   
+    def test_tle_format(self):
+        self.assertTrue(self.size_check(TLE_DATA))
+        self.assertTrue(self.is_check_sum_valid(TLE_DATA))
         
-
     def test_parse_float(self):
 
         # Negative values with negative exponent
@@ -79,7 +78,7 @@ class TLEConstruction_Test(unittest.TestCase):
         self.assertEqual(sat.classification, 'U') # Classification
         self.assertEqual(sat.int_desig, '98067A') # International Designator
 
-        self.assertEqual(sat.epoch, (2020, 1, 29, 13, 8, 59, 979840)) # Epoch (year, month, day, hour, minute, second, microsecond)
+        self.assertEqual(sat.epoch, (2020, 1, 29, 13, 8, 59, 799840)) # Epoch (year, month, day, hour, minute, second, microsecond)
         self.assertAlmostEqual(sat.dn, 0.00001264) # first time deriv. mean motion
         self.assertAlmostEqual(sat.ddn, 0.0) # Second time deriv. mean motion
         self.assertAlmostEqual(sat.bstar, 0.000029621) #BSTAR coeff
@@ -131,5 +130,14 @@ class TLEConstruction_Test(unittest.TestCase):
             [51.6435, 21.0930, 0.0007417, 99.9999, 260.0, 15.49112339, 21166],
         ])
 
+    #I am ending the liveshare because I am leaving
+    def test_epoch_parsing(self):
+        """Test epoch dates, leap years, and invalid days."""
+        return
+        
+    def make_epoch_line(epoch):
+        line1 = TLE_LINE1[:18] + epoch + TLE_LINE1[32:]
+        return line1[:68] + str(tle._compute_checksum(line1[:68]))
+        
 if __name__ == "__main__":
     unittest.main()

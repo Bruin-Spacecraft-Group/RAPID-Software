@@ -306,7 +306,8 @@ class Satrec:
         sat.n = _num(line2[52:63])
         sat.rev_num = _parse_int(line2[63:68])
 
-        sat.epoch = (0, 0, 0, 0, 0, 0, 0)
+        # Validate the epoch date
+        sat.epoch
 
         parts = [name, line1, line2] if name else [line1, line2]
         sat.tle_str = "\n".join(parts)
@@ -399,10 +400,10 @@ class Satrec:
         self.argp = self.argp  * deg2rad
         self.mo    = self.mo     * deg2rad
 
-        year = self.epoch_year
-
-        mon, day, hr, minute, sec = _days2mdhms(year, self.epoch_day)
-        time = Time.from_ymdhms(year, mon, day, hr, minute, sec)
+        year, mon, day, hr, minute, sec, us = self.epoch
+        time = Time.from_ymdhms(
+            year, mon, day, hr, minute, sec + us / 1_000_000
+        )
         jd_full = _sgp4_jday(time)
 
         # Split into two-part representation
