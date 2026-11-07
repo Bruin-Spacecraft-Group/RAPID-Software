@@ -6,7 +6,6 @@
 
 import unittest
 import os
-import tempfile
 import tle
 
 class TLEConstruction_Test(unittest.TestCase):
@@ -56,8 +55,8 @@ class TLEConstruction_Test(unittest.TestCase):
     def test_check_exponents_from_tle(self):
         """Check DDN and BSTAR in a complete TLE."""
         
-        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993"
-        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"
+        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9998"
+        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211666"
 
         # Case 1: Original ISS TLE
         sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1, line2)
@@ -70,7 +69,7 @@ class TLEConstruction_Test(unittest.TestCase):
         line1_case2 = (
             line1[:44] + " 12345-3"
             + line1[52:53] + " 12345-3"
-            + line1[61:]
+            + line1[61:68] + "0"
         )
 
         sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1_case2, line2)
@@ -115,36 +114,41 @@ class TLEConstruction_Test(unittest.TestCase):
 
     def test_from_tle_lines(self):
         """Test parsing TLE from individual lines."""
-        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993"
-        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"
+        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9998"
+        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211666"
         sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1, line2)
         self.assert_parsing(sat)
 
     def test_from_tle_str(self):
         """Test parsing TLE from a string."""
         tle_string = """ISS (ZARYA)
-1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993
-2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"""
+1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9998
+2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211666"""
         sat = tle.Satrec.from_tle_str(tle_string)
         self.assert_parsing(sat)
     
     def test_from_tle_file(self):
         """Test parsing TLE from a file."""
         tle_data = """ISS (ZARYA)
-1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993
-2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            tle_path = os.path.join(temp_dir, "iss.tle")
+1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9998
+2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211666"""
+        tle_path = "iss_test.tle"
+        file_created = False
+        try:
             with open(tle_path, "w", encoding="utf-8") as tle_file:
+                file_created = True
                 tle_file.write(tle_data)
 
             sat = tle.Satrec.from_tle_file(tle_path)
             self.assert_parsing(sat)
+        finally:
+            if file_created:
+                os.remove(tle_path)
 
     def test_to_array(self):
         """Test TLE fields are returned in the documented 2D array layout."""
-        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993"
-        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"
+        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9998"
+        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211666"
         sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1, line2)
 
         self.assertEqual(sat.to_array(), [
