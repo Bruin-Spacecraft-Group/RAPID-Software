@@ -5,5 +5,5 @@
 	path = submodules/Adafruit_CircuitPython_Ticks
 	url = https://github.com/adafruit/Adafruit_CircuitPython_Ticks
 [submodule "submodules/RAPID-0-Undisclosable-Software"]
-	path = submodules/RAPID-0-Undisclosable-Software
+	path = submodules/RAPID-Undisclosable-Software
 	url = https://github.com/Bruin-Spacecraft-Group/RAPID-0-Undisclosable-Software.git
