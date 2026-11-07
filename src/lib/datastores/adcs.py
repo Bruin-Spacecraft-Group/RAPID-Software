@@ -4,8 +4,6 @@ ADCS system for all tasks to update and use. Readings that have not yet been ini
 are set to `None` throughout this module.
 """
 
-import tle
-
 class Datastore:
     """
     Datastore class for adcs processes. Holds time, sensor, and attitude data to be used system-wide
@@ -40,7 +38,8 @@ class Datastore:
             None  # Quaternion representing attitude from body frame to inertial frame
         )
         self.mode = self.DETUMBLE
-        self.satrec: tle.Satrec = tle.Satrec.from_tle_str(self.TLE)
+        # import tle
+        # self.satrec: tle.Satrec = tle.Satrec.from_tle_str(self.TLE)
 
 class Time:
     """

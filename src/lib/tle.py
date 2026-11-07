@@ -15,6 +15,9 @@ except ImportError:
 MIN_PER_DAY = 1440
 EPOCH0 = 2433281.5 # jan 0 1950
 
+_DIGITS = "0123456789"
+_NUMCHARS = "0123456789+-. "
+
 def _day_of_year_to_month_day(day_of_year, is_leap):
     """Core logic for turning days into months, for easy testing."""
     february_bump = (2 - is_leap) * (day_of_year >= 60 + is_leap)
@@ -58,6 +61,60 @@ def _days2mdhms(year, days, round_to_microsecond=6):
 
     return month, day, hour, minute, second
 
+
+def tle_checksum(body):
+    """Modulo-10 checksum of the first 68 characters of a TLE line.
+ 
+    Digits count as their value, '-' counts as 1, everything else
+    (letters, '+', '.', spaces) counts as 0.
+    """
+    total = 0
+    for c in body:
+        if c in _DIGITS:
+            total += int(c)
+        elif c == "-":
+            total += 1
+    return total % 10
+
+def _validate(line1, line2):
+    """Check length, line numbers, checksums and matching catalog numbers."""
+    for n, line in ((1, line1), (2, line2)):
+        if len(line) != 69:
+            raise ValueError(f"line {n}: expected 69 chars, got {len(line)}")
+        if line[0] != str(n) or line[1] != " ":
+            raise ValueError(f"line {n}: bad line number")
+        if line[68] not in _DIGITS or tle_checksum(line[:68]) != int(line[68]):
+            raise ValueError(f"line {n}: checksum mismatch")
+    if line1[2:7] != line2[2:7]:
+        raise ValueError("catalog number mismatch between lines")
+
+def _finite(x):
+    """True if x is neither NaN nor infinity (no math module needed)."""
+    return x == x and x - x == 0
+
+def _num(s):
+    """float() restricted to the characters a TLE number may contain.
+ 
+    Rejects things float() would otherwise accept: 'nan', 'inf', '1e5', '1_0'.
+    """
+    for c in s:
+        if c not in _NUMCHARS:
+            raise ValueError(f"bad character {c} in numeric field {s}")
+    v = float(s)
+    if not _finite(v):
+        raise ValueError(f"non-finite numeric field {s}")
+    return v
+
+def _parse_int(s):
+    """Parse a digits-only integer field; a blank field is 0."""
+    s = s.strip()
+    if not s:
+        return 0
+    for c in s:
+        if c not in _DIGITS:
+            raise ValueError(f"bad character {c} in integer field {s}")
+    return int(s)
+
 def _conv_year(s):
     """Interpret a two-digit year string."""
     if isinstance(s, int):
@@ -90,7 +147,7 @@ def _sgp4_jday(time):
     Converts jdsatepoch into a compatible number for sgp4
     """
 
-    year, mon, day, hr, minute, sec = time
+    year, mon, day, hr, minute, sec = time.time_sgp4()
 
     return (367.0 * year -
             7.0 * (year + ((mon + 9.0) // 12.0)) * 0.25 // 1.0 +
@@ -99,6 +156,23 @@ def _sgp4_jday(time):
             ((sec / 60.0 + minute) / 60.0 + hr) / 24.0
             )
 
+# ---------------------------------------------------------------------------
+# Integer-only calendar helpers (CircuitPython has no calendar/datetime)
+# ---------------------------------------------------------------------------
+
+def _is_leap(y):
+    return (y % 4 == 0 and y % 100 != 0) or y % 400 == 0
+
+def _days_from_civil(y, m, d):
+    """Days since 1970-01-01 (proleptic Gregorian, Hinnant's algorithm)."""
+    if m <= 2:
+        y -= 1
+    era = y // 400
+    yoe = y - era * 400
+    doy = (153 * (m + (-3 if m > 2 else 9)) + 2) // 5 + d - 1
+    doe = yoe * 365 + yoe // 4 - yoe // 100 + doy
+    return era * 146097 + doe - 719468
+
 def jday(time):
     """
     From a date, return a Julian date in its date + fractional form
@@ -106,7 +180,7 @@ def jday(time):
     Used to build the jd, fr parameters in the function call of sgp4_update
     """
 
-    year, mon, day, hr, minute, sec = time
+    year, mon, day, hr, minute, sec = time.time_sgp4()
 
     jd = (367.0 * year
          - 7 * (year + ((mon + 9) // 12.0)) * 0.25 // 1.0
@@ -173,10 +247,12 @@ class Satrec:
 
         self.epoch_year = 0
         self.epoch_day = 0.0
+        self.epoch_day_int = 0
+        self.epoch_frac = 0
         self.dn = 0.0
         self.ddn = 0.0
         self.bstar = 0.0
-        self.ephtype = ""
+        self.ephtype = 0
         self.set_num = 0
 
         self.inc = 0.0
@@ -201,26 +277,39 @@ class Satrec:
         are used in the TLE format.
         """
 
+        line1 = line1.strip()   # clean strings with \r, \n and trailing padding
+        line2 = line2.strip()
+        _validate(line1, line2)
+
+        if line1[23] != '.':
+            raise ValueError("epoch: missing decimal point")
+
         sat = cls()
         sat.name = name
         sat.norad = line1[2:7]
-        sat.classification = line1[7] or 'U'
+        sat.classification = line1[7].strip() or 'U'
         sat.int_desig = line1[9:17].strip()
         sat.epoch_year = _conv_year(line1[18:20])
-        sat.epoch_day = float(line1[20:32])
-        sat.dn = float(line1[33:43])
+        sat.epoch_day = _num(line1[20:32])
+        sat.epoch_day_int = _parse_int(line1[20:23])
+        sat.epoch_frac = _parse_int(line1[24:32])
+        sat.dn = _num(line1[33:43])
         sat.ddn = _parse_float(line1[44:52])
         sat.bstar = _parse_float(line1[53:61])
-        sat.ephtype = int(line1[62])
-        sat.set_num = int(line1[64:68])
-        sat.inc = float(line2[8:16])
-        sat.raan = float(line2[17:25])
+        sat.ephtype = _parse_int(line1[62])
+        sat.set_num = _parse_int(line1[64:68])
+        sat.inc = _num(line2[8:16])
+        sat.raan = _num(line2[17:25])
         sat.ecc = _parse_decimal(line2[26:33])
-        sat.argp = float(line2[34:42])
-        sat.mo = float(line2[43:51])
-        sat.n = float(line2[52:63])
-        sat.rev_num = int(line2[63:68])
-        sat.tle_str = name + line1 + line2
+        sat.argp = _num(line2[34:42])
+        sat.mo = _num(line2[43:51])
+        sat.n = _num(line2[52:63])
+        sat.rev_num = _parse_int(line2[63:68])
+
+        sat.epoch = (0, 0, 0, 0, 0, 0, 0)
+
+        parts = [name, line1, line2] if name else [line1, line2]
+        sat.tle_str = "\n".join(parts)
         return sat
 
     @classmethod
@@ -231,17 +320,59 @@ class Satrec:
 
     @classmethod
     def from_tle_str(cls, string):
-        """Load TLE from a string."""
+        """Load TLE from a string
+        
+        Element lines are found by their '1 ' / '2 ' prefixes, so a missing
+        name line, a BOM, or a Space-Track '0 ' name prefix are all handled.
+        """
+        string = string.replace("\ufeff", "")
         lines = [line.strip() for line in string.splitlines() if line.strip()]
-        if len(lines) == 3:
-            name, line1, line2 = lines
-        elif len(lines) == 2:
-            name = ""
-            line1, line2 = lines
-        else:
+
+        start = -1
+        for i in range(len(lines) - 1):
+            if lines[i][:2] == "1 " and lines[i + 1][:2] == "2 ":
+                start = i
+                break
+
+        if start < 0 or start > 1 or len(lines) != start + 2:
             raise ValueError("TLE data must contain two element lines and an optional name")
 
-        return cls.from_tle_lines(name, line1, line2)
+        name = ""
+        if start == 1:
+            name = lines[0]
+            if name[:2] == "0 ":
+                name = name[2:]
+
+        return cls.from_tle_lines(name, lines[start], lines[start + 1])
+
+    # -- Time/Epoch management --
+    @property
+    def epoch(self):
+        """Epoch as (year, month, day, hour, minute, second, microsecond), UTC.
+ 
+        Pure integer arithmetic, exact to the TLE's 8-digit day fraction.
+        """
+        y = self.epoch_year
+        doy = self.epoch_day_int
+        if not 1 <= doy <= (366 if _is_leap(y) else 365):
+            raise ValueError(f"epoch day {doy} invalid for {y}")
+        if not 0 <= self.epoch_frac <= 99999999:
+            raise ValueError("epoch fraction out of range")
+
+        month, day = _day_of_year_to_month_day(doy, _is_leap(y))
+
+        # 1 unit of the 8-digit fraction = 864 microseconds, so this is exact
+        secs, us = divmod(self.epoch_frac * 864, 1000000)
+        hh, rem = divmod(secs, 3600)
+        mm, ss = divmod(rem, 60)
+        return (y, month, day, hh, mm, ss, us)
+
+    @property
+    def epoch_unix(self):
+        """(whole seconds since 1970-01-01 UTC, microseconds). Integers only."""
+        y, mo, d, hh, mm, ss, us = self.epoch
+        days = _days_from_civil(y, mo, d)
+        return (days * 86400 + hh * 3600 + mm * 60 + ss, us)
 
     @classmethod
     def sgp4_init(cls, tle):
@@ -323,32 +454,3 @@ class Satrec:
         r, v = sgp4_update(self, tsince)
 
         return self.error, r, v
-
-    def error_message(self):
-        """
-        Return error message from current self.error (when polled)
-        """
-        if self.error == 2:
-            return (f'mean motion {0:f} is less than zero').format(self.n)
-
-        return ""
-
-def test():
-    """
-    Test script to test the sgp4 script using the ISS TLE
-    """
-    iss_tle = """ISS (ZARYA)
-    \n1 25544U 98067A   26121.81277072  .00006771  00000-0  13067-3 0  9997 
-    \n2 25544  51.6311 169.6452 0007227  12.7206 347.3964 15.49051775564564"""
-
-    sat: Satrec = Satrec.from_tle_str(
-        iss_tle
-    )
-
-    sgp4_obj : Satrec= Satrec.sgp4_init(sat)
-    time = Time.from_ymdhms(2026, 5, 3, 0, 0, 0)
-    error, r, v = sgp4_obj.sgp4_update(*jday(time))
-    print(error, r, v)
-
-if __name__ == "__main__":
-    test()
