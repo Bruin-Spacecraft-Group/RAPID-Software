@@ -130,7 +130,6 @@ class TLEConstruction_Test(unittest.TestCase):
             [51.6435, 21.0930, 0.0007417, 99.9999, 260.0, 15.49112339, 21166],
         ])
 
-    #I am ending the liveshare because I am leaving
     def test_epoch_parsing(self):
         """Test epoch dates, leap years, and invalid days."""
         return

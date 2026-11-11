@@ -6,6 +6,7 @@ Adapted from the TLE-tools library by @FedericoStra on GitHub
 
 from sgp4 import sgp4_init, sgp4_update
 from datastores.adcs import Time
+import math
 
 try:
     import ulab.numpy as np  # For CircuitPython
@@ -88,9 +89,17 @@ def _validate(line1, line2):
     if line1[2:7] != line2[2:7]:
         raise ValueError("catalog number mismatch between lines")
 
-def _finite(x):
-    """True if x is neither NaN nor infinity (no math module needed)."""
-    return x == x and x - x == 0
+def _fix_name(start, lines):
+    if start < 0 or start > 1 or len(lines) != start + 2:
+        raise ValueError("TLE data must contain two element lines and an optional name")
+
+    name = ""
+    if start == 1:
+        name = lines[0]
+        if name[:2] == "0 ":
+            name = name[2:]
+
+    return name
 
 def _num(s):
     """float() restricted to the characters a TLE number may contain.
@@ -101,7 +110,7 @@ def _num(s):
         if c not in _NUMCHARS:
             raise ValueError(f"bad character {c} in numeric field {s}")
     v = float(s)
-    if not _finite(v):
+    if not math.isfinite(v):
         raise ValueError(f"non-finite numeric field {s}")
     return v
 
@@ -269,6 +278,35 @@ class Satrec:
         self.jdsatepoch = 0.0
         self.jdsatepoch_f = 0.0
 
+    # -- Time/Epoch management --
+    @property
+    def epoch(self):
+        """Epoch as (year, month, day, hour, minute, second, microsecond), UTC.
+    
+        Pure integer arithmetic, exact to the TLE's 8-digit day fraction.
+        """
+        y = self.epoch_year
+        doy = self.epoch_day_int
+        if not 1 <= doy <= (366 if _is_leap(y) else 365):
+            raise ValueError(f"epoch day {doy} invalid for {y}")
+        if not 0 <= self.epoch_frac <= 99999999:
+            raise ValueError("epoch fraction out of range")
+
+        month, day = _day_of_year_to_month_day(doy, _is_leap(y))
+
+        # 1 unit of the 8-digit fraction = 864 microseconds, so this is exact
+        secs, us = divmod(self.epoch_frac * 864, 1000000)
+        hh, rem = divmod(secs, 3600)
+        mm, ss = divmod(rem, 60)
+        return (y, month, day, hh, mm, ss, us)
+
+    @property
+    def epoch_unix(self):
+        """(whole seconds since 1970-01-01 UTC, microseconds). Integers only."""
+        y, mo, d, hh, mm, ss, us = self.epoch
+        days = _days_from_civil(y, mo, d)
+        return (days * 86400 + hh * 3600 + mm * 60 + ss, us)
+
     @classmethod
     def from_tle_lines(cls, name, line1, line2):
         """Parse a TLE from its constituent lines.
@@ -335,45 +373,9 @@ class Satrec:
                 start = i
                 break
 
-        if start < 0 or start > 1 or len(lines) != start + 2:
-            raise ValueError("TLE data must contain two element lines and an optional name")
-
-        name = ""
-        if start == 1:
-            name = lines[0]
-            if name[:2] == "0 ":
-                name = name[2:]
+        name = _fix_name(start, lines)
 
         return cls.from_tle_lines(name, lines[start], lines[start + 1])
-
-    # -- Time/Epoch management --
-    @property
-    def epoch(self):
-        """Epoch as (year, month, day, hour, minute, second, microsecond), UTC.
- 
-        Pure integer arithmetic, exact to the TLE's 8-digit day fraction.
-        """
-        y = self.epoch_year
-        doy = self.epoch_day_int
-        if not 1 <= doy <= (366 if _is_leap(y) else 365):
-            raise ValueError(f"epoch day {doy} invalid for {y}")
-        if not 0 <= self.epoch_frac <= 99999999:
-            raise ValueError("epoch fraction out of range")
-
-        month, day = _day_of_year_to_month_day(doy, _is_leap(y))
-
-        # 1 unit of the 8-digit fraction = 864 microseconds, so this is exact
-        secs, us = divmod(self.epoch_frac * 864, 1000000)
-        hh, rem = divmod(secs, 3600)
-        mm, ss = divmod(rem, 60)
-        return (y, month, day, hh, mm, ss, us)
-
-    @property
-    def epoch_unix(self):
-        """(whole seconds since 1970-01-01 UTC, microseconds). Integers only."""
-        y, mo, d, hh, mm, ss, us = self.epoch
-        days = _days_from_civil(y, mo, d)
-        return (days * 86400 + hh * 3600 + mm * 60 + ss, us)
 
     @classmethod
     def sgp4_init(cls, tle):
@@ -400,9 +402,9 @@ class Satrec:
         self.argp = self.argp  * deg2rad
         self.mo    = self.mo     * deg2rad
 
-        year, mon, day, hr, minute, sec, us = self.epoch
+        year, mon, day, hr, minute, sec = _days2mdhms(year, self.epoch_day)
         time = Time.from_ymdhms(
-            year, mon, day, hr, minute, sec + us / 1_000_000
+            year, mon, day, hr, minute, sec
         )
         jd_full = _sgp4_jday(time)
 
