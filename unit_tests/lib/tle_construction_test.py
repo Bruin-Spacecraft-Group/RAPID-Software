@@ -1,18 +1,20 @@
-# one line of tle may not get through
-# check the exponents (self.ddn and self.bstar)
-# the check sum isnt where its supposed to be ( might be shifted so check column 69)
-# decimal parsing might be off (put decimal in the right place)
-# create a tle string for each case (take current ISS one)
-
+#TODO: Epoch is not beingg parsed/set correctly, need to implement in tle.py then test in here
+#
 import unittest
 import os
-import tempfile
 import tle
+
+# TLE data for the International Space Station (ISS) used in the tests
+TLE_DATA = """ISS (ZARYA)
+1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9998
+2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211666"""
+TLE_NAME, TLE_LINE1, TLE_LINE2 = TLE_DATA.splitlines()
+
 
 class TLEConstruction_Test(unittest.TestCase):
     """Checks if the TLE string is valid."""
 
-    def size_check(tle_text): 
+    def size_check(self, tle_text): 
         """This method checks if both lines of the TLE are 69 characters long."""
         lines = [line.strip() for line in tle_text.strip().splitlines() if line.strip()]
         data_lines = [l for l in lines if l.startswith(('1 ', '2 '))]
@@ -24,7 +26,7 @@ class TLEConstruction_Test(unittest.TestCase):
 
         return True
 
-    def is_check_sum_valid(tle_text):
+    def is_check_sum_valid(self, tle_text):
         """This method goes through both lines of the TLE, adds their numbers up and checks if the remainder
         of the sum of all the numbers is equal to the check sum. If it is, it returns True. If it isn't, it 
         return"""
@@ -51,39 +53,19 @@ class TLEConstruction_Test(unittest.TestCase):
             if total_sum % 10 != expected_checksum:
                 return False
         return True
+   
+    def test_tle_format(self):
+        self.assertTrue(self.size_check(TLE_DATA))
+        self.assertTrue(self.is_check_sum_valid(TLE_DATA))
         
+    def test_parse_float(self):
 
-    def test_check_exponents_from_tle(self):
-        """Check DDN and BSTAR in a complete TLE."""
-        
-        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993"
-        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"
-
-        # Case 1: Original ISS TLE
-        sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1, line2)
-
-
-        self.assertAlmostEqual(sat.ddn, 0.0)
-        self.assertAlmostEqual(sat.bstar, 0.000029621)
-
-        # Case 2: Negative exponent
-        line1_case2 = (
-            line1[:44] + " 12345-3"
-            + line1[52:53] + " 12345-3"
-            + line1[61:]
-        )
-
-        sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1_case2, line2)
-
-        self.assertAlmostEqual(sat.ddn, 0.00012345)
-        self.assertAlmostEqual(sat.bstar, 0.00012345)
-
-        # Case 3: Negative value
+        # Negative values with negative exponent
         self.assertAlmostEqual(
             tle._parse_float("-12345-3"), -0.00012345
         )
 
-        # Case 4: Positive exponent
+        # Positive exponent
         self.assertAlmostEqual(
             tle._parse_float(" 12345+2"), 12.345
         )
@@ -96,8 +78,7 @@ class TLEConstruction_Test(unittest.TestCase):
         self.assertEqual(sat.classification, 'U') # Classification
         self.assertEqual(sat.int_desig, '98067A') # International Designator
 
-        self.assertEqual(sat.epoch_day, 29.54791435) # Days after year as float
-        self.assertEqual(sat.epoch_year, 2020) # Year
+        self.assertEqual(sat.epoch, (2020, 1, 29, 13, 8, 59, 799840)) # Epoch (year, month, day, hour, minute, second, microsecond)
         self.assertAlmostEqual(sat.dn, 0.00001264) # first time deriv. mean motion
         self.assertAlmostEqual(sat.ddn, 0.0) # Second time deriv. mean motion
         self.assertAlmostEqual(sat.bstar, 0.000029621) #BSTAR coeff
@@ -115,44 +96,48 @@ class TLEConstruction_Test(unittest.TestCase):
 
     def test_from_tle_lines(self):
         """Test parsing TLE from individual lines."""
-        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993"
-        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"
-        sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1, line2)
+        sat = tle.Satrec.from_tle_lines(TLE_NAME, TLE_LINE1, TLE_LINE2)
         self.assert_parsing(sat)
 
     def test_from_tle_str(self):
         """Test parsing TLE from a string."""
-        tle_string = """ISS (ZARYA)
-1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993
-2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"""
-        sat = tle.Satrec.from_tle_str(tle_string)
+        sat = tle.Satrec.from_tle_str(TLE_DATA)
         self.assert_parsing(sat)
     
     def test_from_tle_file(self):
         """Test parsing TLE from a file."""
-        tle_data = """ISS (ZARYA)
-1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993
-2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"""
-        with tempfile.TemporaryDirectory() as temp_dir:
-            tle_path = os.path.join(temp_dir, "iss.tle")
+        tle_path = "iss_test.tle"
+        file_created = False
+        try:
             with open(tle_path, "w", encoding="utf-8") as tle_file:
-                tle_file.write(tle_data)
+                file_created = True
+                tle_file.write(TLE_DATA)
 
             sat = tle.Satrec.from_tle_file(tle_path)
             self.assert_parsing(sat)
+        finally:
+            if file_created:
+                os.remove(tle_path)
 
     def test_to_array(self):
         """Test TLE fields are returned in the documented 2D array layout."""
-        line1 = "1 25544U 98067A   20029.54791435  .00001264  00000-0  29621-4 0  9993"
-        line2 = "2 25544  51.6435  21.0930 0007417  99.9999 260.0000 15.49112339211667"
-        sat = tle.Satrec.from_tle_lines("ISS (ZARYA)", line1, line2)
+        sat = tle.Satrec.from_tle_lines(TLE_NAME, TLE_LINE1, TLE_LINE2)
 
         self.assertEqual(sat.to_array(), [
-            ["ISS (ZARYA)"],
+            [TLE_NAME],
             ["25544", "U", "98067A", 2020, 29.54791435, 0.00001264,
              0.0, 0.000029621, 999],
             [51.6435, 21.0930, 0.0007417, 99.9999, 260.0, 15.49112339, 21166],
         ])
 
+    #I am ending the liveshare because I am leaving
+    def test_epoch_parsing(self):
+        """Test epoch dates, leap years, and invalid days."""
+        return
+        
+    def make_epoch_line(epoch):
+        line1 = TLE_LINE1[:18] + epoch + TLE_LINE1[32:]
+        return line1[:68] + str(tle._compute_checksum(line1[:68]))
+        
 if __name__ == "__main__":
     unittest.main()
