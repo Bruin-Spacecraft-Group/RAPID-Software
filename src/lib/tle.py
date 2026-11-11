@@ -4,9 +4,10 @@ Functions and Variables to update and use TLE (two-line element data)
 Adapted from the TLE-tools library by @FedericoStra on GitHub
 """
 
+import math
+
 from sgp4 import sgp4_init, sgp4_update
 from datastores.adcs import Time
-import math
 
 try:
     import ulab.numpy as np  # For CircuitPython
@@ -345,6 +346,7 @@ class Satrec:
         sat.rev_num = _parse_int(line2[63:68])
 
         # Validate the epoch date
+        # pylint: disable=pointless-statement
         sat.epoch
 
         parts = [name, line1, line2] if name else [line1, line2]
@@ -402,7 +404,9 @@ class Satrec:
         self.argp = self.argp  * deg2rad
         self.mo    = self.mo     * deg2rad
 
-        year, mon, day, hr, minute, sec = _days2mdhms(year, self.epoch_day)
+        year = self.epoch_year
+
+        mon, day, hr, minute, sec = _days2mdhms(year, self.epoch_day)
         time = Time.from_ymdhms(
             year, mon, day, hr, minute, sec
         )
