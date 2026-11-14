@@ -79,7 +79,10 @@ def tle_checksum(body):
     return total % 10
 
 def _validate(line1, line2):
-    """Check length, line numbers, checksums and matching catalog numbers."""
+    """Check length, line numbers, checksums, matching catalog numbers, and malformed entries."""
+    if not isinstance(line1, str) or not isinstance(line2, str):
+        raise ValueError("TLE lines must be strings")
+
     for n, line in ((1, line1), (2, line2)):
         if len(line) != 69:
             raise ValueError(f"line {n}: expected 69 chars, got {len(line)}")
@@ -87,8 +90,131 @@ def _validate(line1, line2):
             raise ValueError(f"line {n}: bad line number")
         if line[68] not in _DIGITS or tle_checksum(line[:68]) != int(line[68]):
             raise ValueError(f"line {n}: checksum mismatch")
+
+    def digits(value):
+        return bool(value) and all(char in _DIGITS for char in value)
+
+    def check_separators(line, indexes, n):
+        for index in indexes:
+            if line[index] != " ":
+                raise ValueError(
+                    f"line {n}: expected separator at column {index + 1}"
+                )
+
+    def parse_integer_field(field, label, allow_blank=False):
+        value = field.lstrip(" ")
+        if field != " " * (len(field) - len(value)) + value:
+            raise ValueError(f"{label}: invalid integer field")
+        if not value and allow_blank:
+            return 0
+        if not digits(value):
+            raise ValueError(f"{label}: invalid integer field")
+        return int(value)
+
+    def parse_decimal_field(field, fractional_digits, max_integer_digits, label):
+        value = field.lstrip(" ")
+        if field != " " * (len(field) - len(value)) + value:
+            raise ValueError(f"{label}: invalid decimal field")
+        if value.count(".") != 1:
+            raise ValueError(f"{label}: invalid decimal field")
+        whole, fraction = value.split(".", 1)
+        if (not 1 <= len(whole) <= max_integer_digits or
+                len(fraction) != fractional_digits or
+                not digits(whole) or not digits(fraction)):
+            raise ValueError(f"{label}: invalid decimal field")
+        return float(value)
+
+    check_separators(line1, (8, 17, 32, 43, 52, 61, 63), 1)
+    check_separators(line2, (7, 16, 25, 33, 42, 51), 2)
+
+    for line in (line1, line2):
+        catalog = line[2:7]
+        is_alpha5 = (
+            catalog[0] in "ABCDEFGHJKLMNPQRSTUVWXYZ" and digits(catalog[1:])
+        )
+        if not (digits(catalog) or is_alpha5):
+            raise ValueError("invalid catalog number")
     if line1[2:7] != line2[2:7]:
         raise ValueError("catalog number mismatch between lines")
+
+    if line1[7] not in (" ", "U", "C", "S"):
+        raise ValueError("line 1: invalid classification")
+    designator = line1[9:17]
+    if designator.strip() and (
+        not digits(designator[:5]) or
+        any(char not in "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 "
+            for char in designator[5:])
+    ):
+        raise ValueError("line 1: invalid international designator")
+
+    year_field = line1[18:20]
+    if not digits(year_field):
+        raise ValueError("line 1: invalid epoch year")
+    year = _conv_year(year_field)
+
+    day_field = line1[20:32]
+    if (day_field[3] != "." or not digits(day_field[:3]) or
+            not digits(day_field[4:])):
+        raise ValueError("line 1: invalid epoch day")
+    epoch_day = int(day_field[:3])
+    max_epoch_day = 366 if _is_leap(year) else 365
+    if not 1 <= epoch_day <= max_epoch_day:
+        raise ValueError(f"line 1: epoch day invalid for {year}")
+
+    derivative = line1[33:43]
+    if (derivative[0] not in " +-"
+            or derivative[1] != "."
+            or not digits(derivative[2:])):
+        raise ValueError("line 1: invalid mean motion derivative")
+    float(derivative)
+
+    for field, label in ((line1[44:52], "second derivative"),
+                         (line1[53:61], "BSTAR")):
+        if (field[0] not in " +-"
+                or not digits(field[1:6])
+                or field[6] not in "+-"
+                or not digits(field[7])):
+            raise ValueError(f"line 1: invalid {label} field")
+        _parse_float(field)
+
+    if not digits(line1[62]):
+        raise ValueError("line 1: invalid ephemeris type")
+    parse_integer_field(
+        line1[64:68], "line 1: element set number", allow_blank=True
+    )
+
+    inclination = parse_decimal_field(
+        line2[8:16], 4, 3, "line 2: inclination"
+    )
+    raan = parse_decimal_field(line2[17:25], 4, 3, "line 2: RAAN")
+    if not digits(line2[26:33]):
+        raise ValueError("line 2: invalid eccentricity")
+    eccentricity = int(line2[26:33]) / 10000000.0
+    argument = parse_decimal_field(
+        line2[34:42], 4, 3, "line 2: argument of perigee"
+    )
+    anomaly = parse_decimal_field(
+        line2[43:51], 4, 3, "line 2: mean anomaly"
+    )
+    mean_motion = parse_decimal_field(
+        line2[52:63], 8, 2, "line 2: mean motion"
+    )
+    parse_integer_field(
+        line2[63:68], "line 2: revolution number", allow_blank=True
+    )
+
+    if not 0.0 <= inclination <= 180.0:
+        raise ValueError("line 2: inclination out of range")
+    if not 0.0 <= raan < 360.0:
+        raise ValueError("line 2: RAAN out of range")
+    if not 0.0 <= eccentricity < 1.0:
+        raise ValueError("line 2: eccentricity out of range")
+    if not 0.0 <= argument < 360.0:
+        raise ValueError("line 2: argument of perigee out of range")
+    if not 0.0 <= anomaly < 360.0:
+        raise ValueError("line 2: mean anomaly out of range")
+    if mean_motion <= 0.0:
+        raise ValueError("line 2: mean motion must be positive")
 
 def _fix_name(start, lines):
     if start < 0 or start > 1 or len(lines) != start + 2:
