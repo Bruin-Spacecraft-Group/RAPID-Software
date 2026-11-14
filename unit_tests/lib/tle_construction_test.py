@@ -1,7 +1,7 @@
-#TODO: Test satrec.sgp4_init, and satrec.sgp4_update
 #TODO: Verify that the tests are correct
 import unittest
 import os
+import math
 import tle
 
 # TLE data for the International Space Station (ISS) used in the tests
@@ -442,6 +442,95 @@ class TLEConstruction_Test(unittest.TestCase):
             with self.subTest(invalid_tle=label):
                 with self.assertRaises(ValueError):
                     tle._validate(*pair)
+
+    def test_sgp4_methods(self):
+        """Check SGP4 against published Vallado verification vectors."""
+        # Vanguard 1, case 00005 from the Vallado verification data:
+        # https://github.com/brandon-rhodes/python-sgp4/blob/master/sgp4/SGP4-VER.TLE
+        # https://github.com/brandon-rhodes/python-sgp4/blob/master/sgp4/tcppver.out
+        # https://celestrak.org/publications/AIAA/2008-6770/AIAA-2008-6770.pdf
+        line1 = (
+            "1 00005U 58002B   00179.78495062  .00000023  00000-0  "
+            "28098-4 0  4753"
+        )
+        line2 = (
+            "2 00005  34.2682 348.7242 1859667 331.7664  19.3264 "
+            "10.82419157413667"
+        )
+        sat = tle.Satrec.from_tle_lines("VANGUARD 1", line1, line2)
+        original = (sat.n, sat.dn, sat.ddn, sat.inc, sat.raan, sat.argp, sat.mo)
+        epoch_seconds, epoch_microseconds = sat.epoch_unix
+        expected_epoch_jd = 2440587.5 + (
+            epoch_seconds + epoch_microseconds / 1_000_000
+        ) / 86400
+
+        self.assertIs(tle.Satrec.sgp4_init(sat), sat)
+        self.assertEqual(sat.error, 0)
+        radians_per_revolution = 2 * math.pi
+        converted_n = original[0] * radians_per_revolution / 1440
+        self.assertGreater(sat.n, 0)
+        self.assertAlmostEqual(sat.n, converted_n, delta=converted_n * 0.001)
+        converted_dn = original[1] * radians_per_revolution / 1440**2
+        self.assertAlmostEqual(
+            sat.dn, converted_dn, delta=max(abs(converted_dn) * 1e-10, 1e-15)
+        )
+        self.assertEqual(sat.ddn, original[2] * radians_per_revolution / 1440**3)
+        initialized_angles = (sat.inc, sat.raan, sat.argp, sat.mo)
+        for actual, degrees in zip(initialized_angles, original[3:]):
+            self.assertAlmostEqual(actual, degrees * math.pi / 180, places=12)
+        self.assertAlmostEqual(
+            sat.jdsatepoch + sat.jdsatepoch_f, expected_epoch_jd, places=8
+        )
+
+        error, position, velocity = sat.sgp4_update(
+            sat.jdsatepoch, sat.jdsatepoch_f
+        )
+        self.assertEqual(error, 0)
+        self.assertEqual(sat.error, 0)
+        self.assertAlmostEqual(sat.t, 0.0)
+        # tcppver.out uses different Earth constants; allow their small offset.
+        reference_position = (7022.46529266, -1400.08296755, 0.03995155)
+        reference_velocity = (1.893841015, 6.405893759, 4.534807250)
+        for actual, expected in zip(position, reference_position):
+            self.assertAlmostEqual(actual, expected, delta=0.02)
+        for actual, expected in zip(velocity, reference_velocity):
+            self.assertAlmostEqual(actual, expected, delta=0.00002)
+
+        # WGS-84 reference values from python-sgp4's assert_wgs84() test:
+        # https://github.com/brandon-rhodes/python-sgp4/blob/master/sgp4/tests.py
+        minutes = 309.67110720001529
+        day_offset, epoch_fraction = divmod(
+            sat.jdsatepoch_f + minutes / 1440, 1
+        )
+        error, position, velocity = sat.sgp4_update(
+            sat.jdsatepoch + day_offset, epoch_fraction
+        )
+        self.assertEqual(error, 0)
+        self.assertEqual(sat.error, 0)
+        self.assertAlmostEqual(sat.t, minutes, places=6)
+        reference_position = (
+            -3754.2437675772426,
+            7876.3549956188945,
+            4719.227897029576,
+        )
+        for actual, expected in zip(position, reference_position):
+            self.assertAlmostEqual(actual, expected, delta=0.0002)
+
+        for field, invalid_value, expected_error in (
+            ("ecc", 1.0, 1),
+            ("n", -1.0, 2),
+        ):
+            with self.subTest(invalid_field=field):
+                invalid_sat = tle.Satrec.from_tle_lines("VANGUARD 1", line1, line2)
+                tle.Satrec.sgp4_init(invalid_sat)
+                setattr(invalid_sat, field, invalid_value)
+                error, position, velocity = invalid_sat.sgp4_update(
+                    invalid_sat.jdsatepoch, invalid_sat.jdsatepoch_f
+                )
+                self.assertEqual(error, expected_error)
+                self.assertEqual(invalid_sat.error, expected_error)
+                self.assertFalse(position)
+                self.assertFalse(velocity)
 
 if __name__ == "__main__":
     unittest.main()
