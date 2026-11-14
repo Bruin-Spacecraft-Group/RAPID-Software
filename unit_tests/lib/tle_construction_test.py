@@ -464,6 +464,7 @@ class TLEConstruction_Test(unittest.TestCase):
             epoch_seconds + epoch_microseconds / 1_000_000
         ) / 86400
 
+        # Init tests
         self.assertIs(tle.Satrec.sgp4_init(sat), sat)
         self.assertEqual(sat.error, 0)
         radians_per_revolution = 2 * math.pi
@@ -482,6 +483,7 @@ class TLEConstruction_Test(unittest.TestCase):
             sat.jdsatepoch + sat.jdsatepoch_f, expected_epoch_jd, places=8
         )
 
+        # Update tests
         error, position, velocity = sat.sgp4_update(
             sat.jdsatepoch, sat.jdsatepoch_f
         )
@@ -516,6 +518,7 @@ class TLEConstruction_Test(unittest.TestCase):
         for actual, expected in zip(position, reference_position):
             self.assertAlmostEqual(actual, expected, delta=0.0002)
 
+        # Error checks for invalid inputs to SGP4 update
         for field, invalid_value, expected_error in (
             ("ecc", 1.0, 1),
             ("n", -1.0, 2),
