@@ -1,3 +1,4 @@
 applications/*_testapp
 **/__pycache__/**
 .DS_Store
+.vscode/settings.json
